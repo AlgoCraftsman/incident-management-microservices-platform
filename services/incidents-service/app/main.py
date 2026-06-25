@@ -3,7 +3,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
-from prometheus_fastapi_instrumentator import Instrumentator
+from prometheus_client import make_asgi_app
 from redis.asyncio import Redis
 
 from app.db import init_db
@@ -34,11 +34,9 @@ app.add_middleware(CorrelationIdMiddleware)
 
 protected = [Depends(require_api_key(parse_api_keys(settings.platform_api_keys)))]
 app.include_router(incidents_router, dependencies=protected)
-
-Instrumentator().instrument(app).expose(app, include_in_schema=False)
+app.mount("/metrics", make_asgi_app())
 
 
 @app.get("/health", tags=["health"])
 def health() -> dict[str, str]:
     return {"status": "ok", "service": settings.service_name}
-
