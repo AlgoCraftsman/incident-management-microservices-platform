@@ -69,7 +69,6 @@ jobs:
       - name: Build image for scan
         run: docker build -f services/${{ matrix.service }}/Dockerfile -t incident-platform/${{ matrix.service }}:${{ github.sha }} .
       - name: Run Trivy scanner
-        if: github.event_name == 'pull_request'
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: incident-platform/${{ matrix.service }}:${{ github.sha }}
@@ -78,22 +77,6 @@ jobs:
           scanners: vuln
           ignore-unfixed: true
           exit-code: "1"
-      - name: Run Trivy SARIF scanner
-        if: github.event_name != 'pull_request'
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: incident-platform/${{ matrix.service }}:${{ github.sha }}
-          format: sarif
-          output: trivy-${{ matrix.service }}.sarif
-          severity: HIGH,CRITICAL
-          scanners: vuln
-          ignore-unfixed: true
-          exit-code: "1"
-      - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@v4
-        if: github.event_name != 'pull_request' && always()
-        with:
-          sarif_file: trivy-${{ matrix.service }}.sarif
 
   checkov:
     name: Checkov
