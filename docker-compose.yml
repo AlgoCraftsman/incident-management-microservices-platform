@@ -1,0 +1,91 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  postgres-incidents:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: incidents
+      POSTGRES_USER: incidents
+      POSTGRES_PASSWORD: incidents
+    ports:
+      - "5433:5432"
+    volumes:
+      - incidents-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U incidents -d incidents"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  postgres-alerts:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: alerts
+      POSTGRES_USER: alerts
+      POSTGRES_PASSWORD: alerts
+    ports:
+      - "5434:5432"
+    volumes:
+      - alerts-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U alerts -d alerts"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  incidents-service:
+    build:
+      context: .
+      dockerfile: services/incidents-service/Dockerfile
+    environment:
+      DATABASE_URL: ${INCIDENTS_DATABASE_URL:-postgresql+psycopg://incidents:incidents@postgres-incidents:5432/incidents}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      PLATFORM_API_KEYS: ${PLATFORM_API_KEYS:-dev-platform-key}
+      EVENT_STREAM_NAME: ${EVENT_STREAM_NAME:-incident-platform-events}
+      SERVICE_NAME: incidents-service
+    depends_on:
+      postgres-incidents:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8001:8001"
+
+  alerts-service:
+    build:
+      context: .
+      dockerfile: services/alerts-service/Dockerfile
+    environment:
+      DATABASE_URL: ${ALERTS_DATABASE_URL:-postgresql+psycopg://alerts:alerts@postgres-alerts:5432/alerts}
+      INCIDENTS_SERVICE_URL: ${INCIDENTS_SERVICE_URL:-http://incidents-service:8001}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-platform-key}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      PLATFORM_API_KEYS: ${PLATFORM_API_KEYS:-dev-platform-key}
+      EVENT_STREAM_NAME: ${EVENT_STREAM_NAME:-incident-platform-events}
+      SERVICE_NAME: alerts-service
+    depends_on:
+      postgres-alerts:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      incidents-service:
+        condition: service_started
+    ports:
+      - "8002:8002"
+
+volumes:
+  redis-data:
+  incidents-db:
+  alerts-db:
+
