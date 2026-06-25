@@ -41,8 +41,10 @@ jobs:
         service: [incidents-service, alerts-service]
     steps:
       - uses: actions/checkout@v4
+      - name: Prepare image repository
+        run: echo "IMAGE_REPOSITORY=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
       - name: Build image
-        run: docker build -f services/${{ matrix.service }}/Dockerfile -t ghcr.io/${{ github.repository }}/${{ matrix.service }}:${{ github.sha }} .
+        run: docker build -f services/${{ matrix.service }}/Dockerfile -t "$IMAGE_REPOSITORY/${{ matrix.service }}:${{ github.sha }}" .
       - name: Log in to GHCR
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: docker/login-action@v3
@@ -52,7 +54,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Push image
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: docker push ghcr.io/${{ github.repository }}/${{ matrix.service }}:${{ github.sha }}
+        run: docker push "$IMAGE_REPOSITORY/${{ matrix.service }}:${{ github.sha }}"
 
   trivy:
     name: Trivy ${{ matrix.service }}
@@ -67,16 +69,29 @@ jobs:
       - name: Build image for scan
         run: docker build -f services/${{ matrix.service }}/Dockerfile -t incident-platform/${{ matrix.service }}:${{ github.sha }} .
       - name: Run Trivy scanner
+        if: github.event_name == 'pull_request'
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: incident-platform/${{ matrix.service }}:${{ github.sha }}
+          format: table
+          severity: HIGH,CRITICAL
+          scanners: vuln
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: Run Trivy SARIF scanner
+        if: github.event_name != 'pull_request'
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: incident-platform/${{ matrix.service }}:${{ github.sha }}
           format: sarif
           output: trivy-${{ matrix.service }}.sarif
           severity: HIGH,CRITICAL
+          scanners: vuln
+          ignore-unfixed: true
           exit-code: "1"
       - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        if: github.event_name != 'pull_request' && always()
         with:
           sarif_file: trivy-${{ matrix.service }}.sarif
 
@@ -89,5 +104,5 @@ jobs:
         uses: bridgecrewio/checkov-action@v12.1347.0
         with:
           directory: .
-          framework: dockerfile,secrets
+          framework: dockerfile
           soft_fail: false

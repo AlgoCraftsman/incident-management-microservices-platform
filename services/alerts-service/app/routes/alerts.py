@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/alerts", tags=["alerts"])
 
 SessionDep = Annotated[Session, Depends(get_session)]
-IdempotencyHeader = Annotated[str | None, Header(default=None, alias="Idempotency-Key")]
+IdempotencyHeader = Annotated[str | None, Header(alias="Idempotency-Key")]
 
 
 @router.post("/webhook", response_model=WebhookResult)
@@ -155,4 +155,3 @@ async def publish_alert_event(
     )
     stream_id = await request.app.state.event_publisher.publish(envelope)
     logger.info("published_event event_type=%s stream_id=%s alert_id=%s", event_type, stream_id, alert.id)
-
