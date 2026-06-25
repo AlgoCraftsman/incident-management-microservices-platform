@@ -29,8 +29,8 @@ router = APIRouter(prefix="/incidents", tags=["incidents"])
 
 
 SessionDep = Annotated[Session, Depends(get_session)]
-ActorHeader = Annotated[str | None, Header(default=None, alias="X-Actor")]
-IdempotencyHeader = Annotated[str | None, Header(default=None, alias="Idempotency-Key")]
+ActorHeader = Annotated[str | None, Header(alias="X-Actor")]
+IdempotencyHeader = Annotated[str | None, Header(alias="Idempotency-Key")]
 
 
 @router.post("", response_model=IncidentRead, status_code=status.HTTP_201_CREATED)
