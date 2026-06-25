@@ -1,0 +1,23 @@
+{
+  "receiver": "incident-platform",
+  "status": "firing",
+  "alerts": [
+    {
+      "status": "firing",
+      "labels": {
+        "alertname": "HighErrorRate",
+        "service": "checkout-api",
+        "severity": "critical",
+        "source": "prometheus"
+      },
+      "annotations": {
+        "summary": "Checkout API error rate is above 5%",
+        "description": "The checkout API is returning elevated 5xx responses.",
+        "runbook_url": "https://runbooks.example.com/high-error-rate"
+      },
+      "startsAt": "2026-06-24T20:00:00Z",
+      "endsAt": "0001-01-01T00:00:00Z"
+    }
+  ]
+}
+
