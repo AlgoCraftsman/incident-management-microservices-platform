@@ -1,0 +1,32 @@
+FROM python:3.11-slim AS builder
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /build
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+COPY libs/platform_common /build/libs/platform_common
+COPY services/alerts-service/requirements.txt /build/services/alerts-service/requirements.txt
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r /build/services/alerts-service/requirements.txt
+
+FROM python:3.11-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/opt/venv/bin:$PATH"
+
+RUN useradd --create-home --shell /usr/sbin/nologin appuser
+WORKDIR /app
+
+COPY --from=builder /opt/venv /opt/venv
+COPY services/alerts-service/app /app/app
+
+USER appuser
+EXPOSE 8002
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/health', timeout=2)"
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8002"]
+
