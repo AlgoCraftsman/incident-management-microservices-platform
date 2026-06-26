@@ -23,6 +23,8 @@ WORKDIR /app
 
 COPY --from=builder /opt/venv /opt/venv
 COPY services/alerts-service/app /app/app
+COPY services/alerts-service/alembic.ini /app/alembic.ini
+COPY services/alerts-service/alembic /app/alembic
 RUN /usr/local/bin/python -m pip uninstall -y pip setuptools wheel || true \
     && /opt/venv/bin/python -m pip uninstall -y pip setuptools wheel || true \
     && rm -rf /usr/local/lib/python3.11/site-packages/pip* \

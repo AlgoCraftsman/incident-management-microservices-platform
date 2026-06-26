@@ -48,21 +48,40 @@ curl -X POST http://localhost:8002/alerts/webhook \
   -d @docs/examples/critical-alertmanager-payload.json
 ```
 
+Run the Phase 1 smoke test after the stack is healthy:
+
+```bash
+python scripts/phase1_smoke_test.py
+```
+
+The smoke test posts a critical Prometheus-style alert, verifies alert deduplication, confirms incident promotion, resolves the incident, and checks timeline history.
+
+## Database Migrations
+
+Each service owns its database schema and ships its own Alembic migrations:
+
+- `services/incidents-service/alembic`
+- `services/alerts-service/alembic`
+
+The local containers run migrations on startup. For production, use the same migrations from a deployment job before rolling application replicas.
+
 ## Project Layout
 
 ```text
 .
-├── docs/
-│   ├── adr/
-│   ├── examples/
-│   └── event-contracts.md
-├── libs/
-│   └── platform_common/
-├── services/
-│   ├── alerts-service/
-│   └── incidents-service/
-├── .github/workflows/
-└── docker-compose.yml
+|-- docs/
+|   |-- adr/
+|   |-- examples/
+|   `-- event-contracts.md
+|-- libs/
+|   `-- platform_common/
+|-- scripts/
+|   `-- phase1_smoke_test.py
+|-- services/
+|   |-- alerts-service/
+|   `-- incidents-service/
+|-- .github/workflows/
+`-- docker-compose.yml
 ```
 
 ## Verification Targets
@@ -75,3 +94,10 @@ The Phase 1 target is:
 4. Incident state transitions append immutable timeline records.
 5. Events are written to Redis Streams using versioned envelopes with correlation IDs.
 
+Useful local checks:
+
+```bash
+pytest
+docker compose up --build
+python scripts/phase1_smoke_test.py
+```

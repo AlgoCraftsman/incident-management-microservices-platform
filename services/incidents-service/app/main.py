@@ -6,7 +6,7 @@ from fastapi import Depends, FastAPI
 from prometheus_client import make_asgi_app
 from redis.asyncio import Redis
 
-from app.db import init_db
+from app.migrations import run_schema_migrations
 from app.routes.incidents import router as incidents_router
 from app.settings import settings
 from platform_common.auth import parse_api_keys, require_api_key
@@ -18,7 +18,7 @@ from platform_common.logging import configure_logging
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     configure_logging(settings.service_name)
-    init_db()
+    run_schema_migrations()
     redis = Redis.from_url(settings.redis_url, decode_responses=False)
     app.state.redis = redis
     app.state.event_publisher = RedisStreamPublisher(redis, settings.event_stream_name)
