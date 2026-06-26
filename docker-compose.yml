@@ -2,7 +2,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "${REDIS_HOST_PORT:-6379}:6379"
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - redis-data:/data
@@ -19,7 +19,7 @@ services:
       POSTGRES_USER: incidents
       POSTGRES_PASSWORD: incidents
     ports:
-      - "5433:5432"
+      - "${INCIDENTS_DB_HOST_PORT:-5433}:5432"
     volumes:
       - incidents-db:/var/lib/postgresql/data
     healthcheck:
@@ -35,7 +35,7 @@ services:
       POSTGRES_USER: alerts
       POSTGRES_PASSWORD: alerts
     ports:
-      - "5434:5432"
+      - "${ALERTS_DB_HOST_PORT:-5434}:5432"
     volumes:
       - alerts-db:/var/lib/postgresql/data
     healthcheck:
@@ -60,7 +60,7 @@ services:
       redis:
         condition: service_healthy
     ports:
-      - "8001:8001"
+      - "${INCIDENTS_SERVICE_HOST_PORT:-8001}:8001"
 
   alerts-service:
     build:
@@ -82,10 +82,9 @@ services:
       incidents-service:
         condition: service_started
     ports:
-      - "8002:8002"
+      - "${ALERTS_SERVICE_HOST_PORT:-8002}:8002"
 
 volumes:
   redis-data:
   incidents-db:
   alerts-db:
-
