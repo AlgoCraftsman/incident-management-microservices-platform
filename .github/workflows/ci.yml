@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [incidents-service, alerts-service]
+        service: [incidents-service, alerts-service, oncall-service, status-page-service]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -38,7 +38,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [incidents-service, alerts-service]
+        service: [incidents-service, alerts-service, oncall-service, status-page-service]
     steps:
       - uses: actions/checkout@v4
       - name: Prepare image repository
@@ -63,7 +63,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [incidents-service, alerts-service]
+        service: [incidents-service, alerts-service, oncall-service, status-page-service]
     steps:
       - uses: actions/checkout@v4
       - name: Build image for scan

@@ -6,6 +6,8 @@ The first build slice implements the incident lifecycle foundation:
 
 - `incidents-service`: owns incident state, timeline history, lifecycle transitions, and incident events.
 - `alerts-service`: ingests Alertmanager-style webhooks, deduplicates raw alerts, and promotes eligible alerts into incidents.
+- `oncall-service`: resolves the current engineer from rotation schedules and records notification attempts.
+- `status-page-service`: publishes component status and converts incident events into stakeholder-facing updates.
 - `platform-common`: shared operational primitives for correlation IDs, API-key auth, event envelopes, Redis Streams publishing, and logging.
 
 ## Architecture Principles
@@ -28,9 +30,13 @@ Service URLs:
 
 - Incidents API: `http://localhost:8001`
 - Alerts API: `http://localhost:8002`
+- On-Call API: `http://localhost:8003`
+- Status Page API: `http://localhost:8004`
 - Redis: `localhost:6379`
 - PostgreSQL incidents DB: `localhost:5433`
 - PostgreSQL alerts DB: `localhost:5434`
+- PostgreSQL on-call DB: `localhost:5435`
+- PostgreSQL status page DB: `localhost:5436`
 
 Default local API key:
 
@@ -56,12 +62,22 @@ python scripts/phase1_smoke_test.py
 
 The smoke test posts a critical Prometheus-style alert, verifies alert deduplication, confirms incident promotion, resolves the incident, and checks timeline history.
 
+Run the Phase 2 smoke test to verify cross-service routing:
+
+```bash
+python scripts/phase2_smoke_test.py
+```
+
+The Phase 2 smoke test creates an on-call schedule, posts a critical alert, verifies automatic notification creation, verifies a public major outage status update, and acknowledges the page.
+
 ## Database Migrations
 
 Each service owns its database schema and ships its own Alembic migrations:
 
 - `services/incidents-service/alembic`
 - `services/alerts-service/alembic`
+- `services/oncall-service/alembic`
+- `services/status-page-service/alembic`
 
 The local containers run migrations on startup. For production, use the same migrations from a deployment job before rolling application replicas.
 
@@ -79,7 +95,9 @@ The local containers run migrations on startup. For production, use the same mig
 |   `-- phase1_smoke_test.py
 |-- services/
 |   |-- alerts-service/
-|   `-- incidents-service/
+|   |-- incidents-service/
+|   |-- oncall-service/
+|   `-- status-page-service/
 |-- .github/workflows/
 `-- docker-compose.yml
 ```
@@ -100,4 +118,5 @@ Useful local checks:
 pytest
 docker compose up --build
 python scripts/phase1_smoke_test.py
+python scripts/phase2_smoke_test.py
 ```
