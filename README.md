@@ -70,6 +70,16 @@ python scripts/phase2_smoke_test.py
 
 The Phase 2 smoke test creates an on-call schedule, posts a critical alert, verifies automatic notification creation, verifies a public major outage status update, and acknowledges the page.
 
+## Notification Delivery
+
+`oncall-service` defaults to free mock delivery. Notification records still capture the selected channel, target engineer, attempts, provider, and delivery detail, but no paid external provider is required.
+
+Optional integrations can be enabled through environment variables:
+
+- `SLACK_WEBHOOK_URL`: send Slack-compatible webhook payloads for engineers with `slack_id`.
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`, `SMTP_USE_TLS`: send email pages through an SMTP server.
+- `NOTIFICATION_WEBHOOK_URL` and `SMS_WEBHOOK_URL`: send generic webhook payloads for webhook/SMS-style delivery.
+
 ## Database Migrations
 
 Each service owns its database schema and ships its own Alembic migrations:

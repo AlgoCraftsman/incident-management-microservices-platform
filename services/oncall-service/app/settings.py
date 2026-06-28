@@ -14,6 +14,15 @@ class Settings(BaseSettings):
     platform_api_keys: str = "dev-platform-key"
     incidents_service_url: str = "http://localhost:8001"
     internal_api_key: str = "dev-platform-key"
+    slack_webhook_url: str | None = None
+    notification_webhook_url: str | None = None
+    sms_webhook_url: str | None = None
+    smtp_host: str | None = None
+    smtp_port: int = 1025
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_from_email: str = "incident-platform@example.local"
+    smtp_use_tls: bool = False
 
 
 settings = Settings()

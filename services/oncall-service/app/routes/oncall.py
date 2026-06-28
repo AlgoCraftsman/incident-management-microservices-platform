@@ -26,6 +26,7 @@ from app.services import (
     get_current_oncall,
     get_default_schedule,
     get_schedule_or_404,
+    retry_notification,
     update_schedule,
 )
 
@@ -108,6 +109,16 @@ async def acknowledge(notification_id: str, session: SessionDep) -> Notification
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Notification not found")
     updated, incident_acknowledged = await acknowledge_notification(session, notification)
     return NotificationAckResult(notification=updated, incident_acknowledged=incident_acknowledged)
+
+
+@router.post("/notifications/{notification_id}/retry", response_model=NotificationRead)
+def retry(notification_id: str, session: SessionDep) -> Notification:
+    notification = session.get(Notification, notification_id)
+    if notification is None:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Notification not found")
+    return retry_notification(session, notification)
 
 
 def schedule_detail(session: Session, schedule: Schedule) -> ScheduleDetail:
