@@ -9,9 +9,12 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.delivery import deliver_notification
 from app.models import Notification, NotificationChannel, NotificationStatus, RotationType, Schedule, ScheduleOverride
 from app.schemas import NotifyRequest, ScheduleCreate, ScheduleUpdate
 from app.settings import settings
+
+MAX_CHANNEL_ATTEMPTS = 3
 
 
 def create_schedule(session: Session, payload: ScheduleCreate) -> Schedule:
@@ -83,24 +86,49 @@ def dispatch_notification(session: Session, payload: NotifyRequest) -> Notificat
     schedule = get_schedule_or_404(session, payload.schedule_id) if payload.schedule_id else get_default_schedule(session)
     member = get_current_oncall(session, schedule)
     channel = choose_channel(member)
+    message_payload = build_message_payload(payload, member)
+    delivery = deliver_notification(
+        channel=channel,
+        member=member,
+        message_payload=message_payload,
+        settings=settings,
+    )
     notification = Notification(
         incident_id=payload.incident_id,
         schedule_id=schedule.id,
         user_id=member["user_id"],
         channel=channel,
-        status=NotificationStatus.sent,
-        sent_at=datetime.now(UTC),
+        status=NotificationStatus.sent if delivery.success else NotificationStatus.failed,
+        sent_at=datetime.now(UTC) if delivery.success else None,
         attempts=1,
-        payload={
-            "incident_id": payload.incident_id,
-            "title": payload.title,
-            "severity": payload.severity,
-            "service_name": payload.service_name,
-            "target": member,
-            "message": f"Incident {payload.incident_id} requires acknowledgement",
-        },
+        payload={**message_payload, "delivery": {"provider": delivery.provider, "detail": delivery.detail}},
+        last_error=None if delivery.success else delivery.detail,
     )
     session.add(notification)
+    session.commit()
+    session.refresh(notification)
+    return notification
+
+
+def retry_notification(session: Session, notification: Notification) -> Notification:
+    if notification.status == NotificationStatus.acknowledged:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Acknowledged notifications cannot be retried")
+    if notification.attempts >= MAX_CHANNEL_ATTEMPTS:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Notification retry limit reached")
+
+    member = notification.payload.get("target") or {"user_id": notification.user_id}
+    message_payload = {key: value for key, value in notification.payload.items() if key != "delivery"}
+    delivery = deliver_notification(
+        channel=notification.channel,
+        member=member,
+        message_payload=message_payload,
+        settings=settings,
+    )
+    notification.attempts += 1
+    notification.status = NotificationStatus.sent if delivery.success else NotificationStatus.failed
+    notification.sent_at = datetime.now(UTC) if delivery.success else notification.sent_at
+    notification.payload = {**message_payload, "delivery": {"provider": delivery.provider, "detail": delivery.detail}}
+    notification.last_error = None if delivery.success else delivery.detail
     session.commit()
     session.refresh(notification)
     return notification
@@ -151,6 +179,17 @@ def choose_channel(member: dict) -> NotificationChannel:
     if member.get("phone"):
         return NotificationChannel.sms
     return NotificationChannel.webhook
+
+
+def build_message_payload(payload: NotifyRequest, member: dict) -> dict:
+    return {
+        "incident_id": payload.incident_id,
+        "title": payload.title,
+        "severity": payload.severity,
+        "service_name": payload.service_name,
+        "target": member,
+        "message": f"Incident {payload.incident_id} requires acknowledgement",
+    }
 
 
 def _member_by_user_id(members: list[dict], user_id: str) -> dict:

@@ -6,9 +6,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.db import Base
-from app.models import NotificationChannel, RotationType, Schedule
+from app.models import Notification, NotificationChannel, NotificationStatus, RotationType, Schedule
 from app.schemas import NotifyRequest
-from app.services import dispatch_notification, get_current_oncall
+from app.services import MAX_CHANNEL_ATTEMPTS, dispatch_notification, get_current_oncall, retry_notification
 
 
 def make_session():
@@ -55,4 +55,32 @@ def test_dispatch_prefers_slack_and_records_notification_payload():
 
     assert notification.channel == NotificationChannel.slack
     assert notification.attempts == 1
+    assert notification.status == NotificationStatus.sent
     assert notification.payload["service_name"] == "checkout"
+    assert notification.payload["delivery"]["provider"] == "mock-slack"
+
+
+def test_retry_failed_notification_stops_at_attempt_limit():
+    session = make_session()
+    notification = Notification(
+        incident_id="incident-1",
+        user_id="u1",
+        channel=NotificationChannel.email,
+        status=NotificationStatus.failed,
+        attempts=MAX_CHANNEL_ATTEMPTS,
+        payload={
+            "incident_id": "incident-1",
+            "target": {"user_id": "u1", "name": "Asha"},
+            "message": "Incident incident-1 requires acknowledgement",
+        },
+    )
+    session.add(notification)
+    session.commit()
+
+    import pytest
+    from fastapi import HTTPException
+
+    with pytest.raises(HTTPException) as exc:
+        retry_notification(session, notification)
+
+    assert exc.value.status_code == 409
