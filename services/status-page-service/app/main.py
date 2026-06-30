@@ -12,7 +12,13 @@ from redis.exceptions import ResponseError
 from app.db import SessionLocal
 from app.migrations import run_schema_migrations
 from app.routes.status import router as status_router
-from app.services import apply_auto_update, auto_update_from_event
+from app.services import (
+    already_processed_event,
+    apply_auto_update,
+    auto_update_from_event,
+    parse_event,
+    record_processed_event,
+)
 from app.settings import settings
 from platform_common.auth import parse_api_keys, require_api_key
 from platform_common.correlation import CorrelationIdMiddleware
@@ -77,16 +83,50 @@ async def consume_incident_events(redis: Redis) -> None:
                     await redis.xack(settings.event_stream_name, settings.event_consumer_group, stream_id)
                     continue
                 try:
-                    payload = auto_update_from_event(raw_event)
-                    if payload is not None:
-                        with SessionLocal() as session:
-                            updates = apply_auto_update(session, payload)
+                    event = parse_event(raw_event)
+                    stream_id_value = _stream_id_to_str(stream_id)
+                    with SessionLocal() as session:
+                        if already_processed_event(session, event["event_id"]):
+                            await redis.xack(settings.event_stream_name, settings.event_consumer_group, stream_id)
+                            continue
+                        payload = auto_update_from_event(raw_event)
+                        if payload is None:
+                            record_processed_event(
+                                session,
+                                event=event,
+                                stream_id=stream_id_value,
+                                status_value="ignored",
+                            )
+                        else:
+                            updates = apply_auto_update(session, payload, source_event_id=event["event_id"])
+                            record_processed_event(
+                                session,
+                                event=event,
+                                stream_id=stream_id_value,
+                                status_value="processed",
+                            )
                             logger.info(
                                 "created_status_updates count=%s incident_id=%s",
                                 len(updates),
                                 payload.incident_id,
                             )
-                except Exception:
+                except Exception as exc:
                     logger.exception("status_event_processing_failed stream_id=%s", stream_id)
+                    try:
+                        event = parse_event(raw_event)
+                        with SessionLocal() as session:
+                            record_processed_event(
+                                session,
+                                event=event,
+                                stream_id=_stream_id_to_str(stream_id),
+                                status_value="failed",
+                                error=str(exc),
+                            )
+                    except Exception:
+                        logger.exception("status_failed_event_record_failed stream_id=%s", stream_id)
                 finally:
                     await redis.xack(settings.event_stream_name, settings.event_consumer_group, stream_id)
+
+
+def _stream_id_to_str(stream_id: bytes | str) -> str:
+    return stream_id.decode("utf-8") if isinstance(stream_id, bytes) else stream_id

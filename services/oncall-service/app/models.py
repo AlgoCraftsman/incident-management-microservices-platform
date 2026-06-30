@@ -4,7 +4,7 @@ import enum
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON
@@ -70,8 +70,10 @@ class ScheduleOverride(Base):
 
 class Notification(Base):
     __tablename__ = "notifications"
+    __table_args__ = (UniqueConstraint("source_event_id", name="uq_notifications_source_event_id"),)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid_str)
+    source_event_id: Mapped[str | None] = mapped_column(String(36), index=True)
     incident_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     schedule_id: Mapped[str | None] = mapped_column(String(36), index=True)
     user_id: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
@@ -90,3 +92,14 @@ class Notification(Base):
     payload: Mapped[dict] = mapped_column(json_type(), nullable=False, default=dict)
     last_error: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=now_utc)
+
+
+class ProcessedEvent(Base):
+    __tablename__ = "processed_events"
+
+    event_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    stream_id: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    event_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    error: Mapped[str | None] = mapped_column(Text)
+    processed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=now_utc)
