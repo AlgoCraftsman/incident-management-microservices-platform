@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Component, ComponentStatus, StatusUpdate
+from app.models import Component, ComponentStatus, ProcessedEvent, StatusUpdate
 from app.schemas import AutoStatusUpdate, ComponentCreate, StatusUpdateCreate
 
 
@@ -29,7 +30,11 @@ def create_component(session: Session, payload: ComponentCreate) -> Component:
     return component
 
 
-def post_status_update(session: Session, payload: StatusUpdateCreate) -> list[StatusUpdate]:
+def post_status_update(
+    session: Session,
+    payload: StatusUpdateCreate,
+    source_event_id: str | None = None,
+) -> list[StatusUpdate]:
     updates: list[StatusUpdate] = []
     for component_name in payload.component_names:
         component = ensure_component(session, component_name)
@@ -38,6 +43,7 @@ def post_status_update(session: Session, payload: StatusUpdateCreate) -> list[St
         component.message = payload.message
         resolved_at = datetime.now(UTC) if payload.status == ComponentStatus.operational else None
         update = StatusUpdate(
+            source_event_id=source_event_id,
             component_name=component_name,
             status=payload.status,
             incident_id=payload.incident_id,
@@ -54,7 +60,18 @@ def post_status_update(session: Session, payload: StatusUpdateCreate) -> list[St
     return updates
 
 
-def apply_auto_update(session: Session, payload: AutoStatusUpdate) -> list[StatusUpdate]:
+def apply_auto_update(
+    session: Session,
+    payload: AutoStatusUpdate,
+    source_event_id: str | None = None,
+) -> list[StatusUpdate]:
+    if source_event_id is not None:
+        existing = session.scalars(
+            select(StatusUpdate).where(StatusUpdate.source_event_id == source_event_id)
+        ).all()
+        if existing:
+            return existing
+
     component_name = payload.service_name or "platform"
     status_value = ComponentStatus.operational if payload.status == "resolved" else status_from_severity(payload.severity)
     message = (
@@ -72,11 +89,12 @@ def apply_auto_update(session: Session, payload: AutoStatusUpdate) -> list[Statu
             posted_by="incident-automation",
             is_public=True,
         ),
+        source_event_id=source_event_id,
     )
 
 
 def auto_update_from_event(raw_event: str | bytes) -> AutoStatusUpdate | None:
-    event = json.loads(raw_event.decode("utf-8") if isinstance(raw_event, bytes) else raw_event)
+    event = parse_event(raw_event)
     if event.get("event_type") not in {"incident.created", "incident.resolved"}:
         return None
     payload = event.get("payload") or {}
@@ -87,6 +105,38 @@ def auto_update_from_event(raw_event: str | bytes) -> AutoStatusUpdate | None:
         service_name=payload.get("service_name"),
         status=payload.get("status", "open"),
     )
+
+
+def parse_event(raw_event: str | bytes) -> dict[str, Any]:
+    return json.loads(raw_event.decode("utf-8") if isinstance(raw_event, bytes) else raw_event)
+
+
+def already_processed_event(session: Session, event_id: str) -> bool:
+    return session.get(ProcessedEvent, event_id) is not None
+
+
+def record_processed_event(
+    session: Session,
+    *,
+    event: dict[str, Any],
+    stream_id: str,
+    status_value: str,
+    error: str | None = None,
+) -> ProcessedEvent:
+    existing = session.get(ProcessedEvent, event["event_id"])
+    if existing is not None:
+        return existing
+    processed = ProcessedEvent(
+        event_id=event["event_id"],
+        stream_id=stream_id,
+        event_type=event.get("event_type", "unknown"),
+        status=status_value,
+        error=error[:1000] if error else None,
+    )
+    session.add(processed)
+    session.commit()
+    session.refresh(processed)
+    return processed
 
 
 def status_from_severity(severity: str) -> ComponentStatus:

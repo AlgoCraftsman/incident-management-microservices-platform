@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
+from typing import Any
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -10,7 +11,15 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.delivery import deliver_notification
-from app.models import Notification, NotificationChannel, NotificationStatus, RotationType, Schedule, ScheduleOverride
+from app.models import (
+    Notification,
+    NotificationChannel,
+    NotificationStatus,
+    ProcessedEvent,
+    RotationType,
+    Schedule,
+    ScheduleOverride,
+)
 from app.schemas import NotifyRequest, ScheduleCreate, ScheduleUpdate
 from app.settings import settings
 
@@ -82,7 +91,14 @@ def create_override(session: Session, schedule: Schedule, user_id: str, until: d
     return override
 
 
-def dispatch_notification(session: Session, payload: NotifyRequest) -> Notification:
+def dispatch_notification(session: Session, payload: NotifyRequest, source_event_id: str | None = None) -> Notification:
+    if source_event_id is not None:
+        existing = session.scalars(
+            select(Notification).where(Notification.source_event_id == source_event_id)
+        ).one_or_none()
+        if existing is not None:
+            return existing
+
     schedule = get_schedule_or_404(session, payload.schedule_id) if payload.schedule_id else get_default_schedule(session)
     member = get_current_oncall(session, schedule)
     channel = choose_channel(member)
@@ -94,6 +110,7 @@ def dispatch_notification(session: Session, payload: NotifyRequest) -> Notificat
         settings=settings,
     )
     notification = Notification(
+        source_event_id=source_event_id,
         incident_id=payload.incident_id,
         schedule_id=schedule.id,
         user_id=member["user_id"],
@@ -159,7 +176,7 @@ async def acknowledge_notification(session: Session, notification: Notification)
 
 
 def notification_from_incident_event(raw_event: str | bytes) -> NotifyRequest | None:
-    event = json.loads(raw_event.decode("utf-8") if isinstance(raw_event, bytes) else raw_event)
+    event = parse_event(raw_event)
     if event.get("event_type") != "incident.created":
         return None
     payload = event.get("payload") or {}
@@ -169,6 +186,38 @@ def notification_from_incident_event(raw_event: str | bytes) -> NotifyRequest | 
         severity=payload.get("severity"),
         service_name=payload.get("service_name"),
     )
+
+
+def parse_event(raw_event: str | bytes) -> dict[str, Any]:
+    return json.loads(raw_event.decode("utf-8") if isinstance(raw_event, bytes) else raw_event)
+
+
+def already_processed_event(session: Session, event_id: str) -> bool:
+    return session.get(ProcessedEvent, event_id) is not None
+
+
+def record_processed_event(
+    session: Session,
+    *,
+    event: dict[str, Any],
+    stream_id: str,
+    status_value: str,
+    error: str | None = None,
+) -> ProcessedEvent:
+    existing = session.get(ProcessedEvent, event["event_id"])
+    if existing is not None:
+        return existing
+    processed = ProcessedEvent(
+        event_id=event["event_id"],
+        stream_id=stream_id,
+        event_type=event.get("event_type", "unknown"),
+        status=status_value,
+        error=error[:1000] if error else None,
+    )
+    session.add(processed)
+    session.commit()
+    session.refresh(processed)
+    return processed
 
 
 def choose_channel(member: dict) -> NotificationChannel:
