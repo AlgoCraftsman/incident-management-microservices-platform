@@ -98,6 +98,7 @@ The local containers run migrations on startup. For production, use the same mig
 |-- docs/
 |   |-- adr/
 |   |-- examples/
+|   |-- openapi/
 |   `-- event-contracts.md
 |-- libs/
 |   `-- platform_common/
@@ -129,4 +130,13 @@ pytest
 docker compose up --build
 python scripts/phase1_smoke_test.py
 python scripts/phase2_smoke_test.py
+python scripts/export_openapi.py --check
+```
+
+## API Contracts
+
+OpenAPI contracts for all HTTP services are committed under `docs/openapi/` and documented in `docs/api-contracts.md`. Regenerate them after route or schema changes with:
+
+```bash
+python scripts/export_openapi.py
 ```
