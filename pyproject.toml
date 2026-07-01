@@ -1,5 +1,5 @@
 [tool.pytest.ini_options]
-testpaths = ["services"]
+testpaths = ["services", "libs"]
 python_files = ["test_*.py"]
 addopts = "-q"
 
@@ -9,4 +9,3 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
-

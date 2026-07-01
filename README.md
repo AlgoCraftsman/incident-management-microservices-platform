@@ -80,6 +80,10 @@ Optional integrations can be enabled through environment variables:
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`, `SMTP_USE_TLS`: send email pages through an SMTP server.
 - `NOTIFICATION_WEBHOOK_URL` and `SMS_WEBHOOK_URL`: send generic webhook payloads for webhook/SMS-style delivery.
 
+## Authentication
+
+All non-health service endpoints require `X-API-Key`. The default local key is `dev-platform-key`, and scoped API-key configuration is documented in `docs/authentication.md`.
+
 ## Database Migrations
 
 Each service owns its database schema and ships its own Alembic migrations:
