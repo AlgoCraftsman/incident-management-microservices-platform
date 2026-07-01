@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, Query, Request, Response, status
@@ -11,6 +10,7 @@ from app.db import get_session
 from app.models import Incident, IncidentStatus, Severity
 from app.schemas import CommentCreate, IncidentCreate, IncidentDetail, IncidentRead, IncidentUpdate, TimelineEventRead
 from app.services import (
+    EventContext,
     acknowledge_incident,
     add_comment,
     create_incident,
@@ -21,10 +21,8 @@ from app.services import (
     update_incident,
 )
 from platform_common.correlation import get_correlation_id
-from platform_common.events import EventEnvelope
 from platform_common.responses import set_duplicate_warning
 
-logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/incidents", tags=["incidents"])
 
 
@@ -47,10 +45,15 @@ async def create(
         response.status_code = status.HTTP_200_OK
         return existing
     duplicate = has_open_duplicate(session, payload.service_name)
-    incident = create_incident(session, payload, actor, idempotency_key)
+    incident = create_incident(
+        session,
+        payload,
+        actor,
+        idempotency_key,
+        event_context=event_context(request, idempotency_key),
+    )
     if duplicate:
         set_duplicate_warning(response, f"Another active incident already exists for service {payload.service_name}")
-    await publish_incident_event(request, "incident.created", incident, idempotency_key)
     return incident
 
 
@@ -85,12 +88,7 @@ async def patch(
     idempotency_key: IdempotencyHeader = None,
 ) -> Incident:
     incident = get_incident_or_404(session, incident_id)
-    updated = update_incident(session, incident, payload, actor)
-    event_type = "incident.updated"
-    if payload.status is not None:
-        event_type = f"incident.{payload.status.value}"
-    await publish_incident_event(request, event_type, updated, idempotency_key)
-    return updated
+    return update_incident(session, incident, payload, actor, event_context=event_context(request, idempotency_key))
 
 
 @router.post("/{incident_id}/acknowledge", response_model=IncidentRead)
@@ -102,9 +100,7 @@ async def acknowledge(
     idempotency_key: IdempotencyHeader = None,
 ) -> Incident:
     incident = get_incident_or_404(session, incident_id)
-    updated = acknowledge_incident(session, incident, actor)
-    await publish_incident_event(request, "incident.acknowledged", updated, idempotency_key)
-    return updated
+    return acknowledge_incident(session, incident, actor, event_context=event_context(request, idempotency_key))
 
 
 @router.post("/{incident_id}/resolve", response_model=IncidentRead)
@@ -116,9 +112,7 @@ async def resolve(
     idempotency_key: IdempotencyHeader = None,
 ) -> Incident:
     incident = get_incident_or_404(session, incident_id)
-    updated = resolve_incident(session, incident, actor)
-    await publish_incident_event(request, "incident.resolved", updated, idempotency_key)
-    return updated
+    return resolve_incident(session, incident, actor, event_context=event_context(request, idempotency_key))
 
 
 @router.get("/{incident_id}/timeline", response_model=list[TimelineEventRead])
@@ -139,26 +133,9 @@ def comment(incident_id: str, payload: CommentCreate, session: SessionDep) -> ob
     return add_comment(session, incident, payload)
 
 
-async def publish_incident_event(
-    request: Request,
-    event_type: str,
-    incident: Incident,
-    idempotency_key: str | None,
-) -> None:
-    envelope = EventEnvelope.create(
-        event_type=event_type,
+def event_context(request: Request, idempotency_key: str | None) -> EventContext:
+    return EventContext(
         producer=request.app.state.service_name,
         correlation_id=get_correlation_id(),
         idempotency_key=idempotency_key,
-        payload={
-            "incident_id": incident.id,
-            "title": incident.title,
-            "severity": incident.severity.value,
-            "status": incident.status.value,
-            "service_name": incident.service_name,
-            "assignee_id": incident.assignee_id,
-            "alert_ids": incident.alert_ids,
-        },
     )
-    stream_id = await request.app.state.event_publisher.publish(envelope)
-    logger.info("published_event event_type=%s stream_id=%s incident_id=%s", event_type, stream_id, incident.id)

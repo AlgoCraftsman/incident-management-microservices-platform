@@ -36,3 +36,6 @@ All platform events use a versioned envelope.
 - Consumers must ignore unknown payload fields.
 - Producers must include `correlation_id` for traceability across services.
 
+## Publishing Reliability
+
+`incidents-service` stages lifecycle events in a transactional outbox table before publishing them to Redis Streams. This keeps incident state changes and event intent in the same database transaction, then lets a background publisher retry Redis delivery until the event is marked published.

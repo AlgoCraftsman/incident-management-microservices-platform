@@ -4,9 +4,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.db import Base
-from app.models import IncidentStatus, Severity, TimelineEvent
+from app.models import IncidentStatus, OutboxEvent, Severity, TimelineEvent
 from app.schemas import IncidentCreate
-from app.services import create_incident, get_incident_by_idempotency_key, has_open_duplicate
+from app.services import EventContext, create_incident, get_incident_by_idempotency_key, has_open_duplicate
 
 
 def make_session():
@@ -32,6 +32,36 @@ def test_create_incident_records_idempotency_and_timeline_event():
     assert timeline.event_type == "incident.created"
     assert timeline.actor == "alerts-service"
     assert timeline.event_metadata["service_name"] == "checkout"
+
+
+def test_create_incident_queues_outbox_event_in_same_transaction():
+    session = make_session()
+    payload = IncidentCreate(
+        title="Checkout error budget burn",
+        description="Critical error rate on checkout",
+        severity=Severity.p1,
+        service_name="checkout",
+        alert_ids=["alert-1"],
+    )
+
+    incident = create_incident(
+        session,
+        payload,
+        actor="alerts-service",
+        idempotency_key="alert:fingerprint-1",
+        event_context=EventContext(
+            producer="incidents-service",
+            correlation_id="correlation-1",
+            idempotency_key="alert:fingerprint-1",
+        ),
+    )
+
+    event = session.query(OutboxEvent).one()
+    assert event.event_type == "incident.created"
+    assert event.status == "pending"
+    assert event.correlation_id == "correlation-1"
+    assert event.idempotency_key == "alert:fingerprint-1"
+    assert event.payload["incident_id"] == incident.id
 
 
 def test_open_duplicate_lookup_ignores_resolved_incidents():
