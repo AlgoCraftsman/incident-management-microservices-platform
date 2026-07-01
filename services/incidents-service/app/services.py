@@ -1,16 +1,24 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy import Select, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.models import IdempotencyRecord, Incident, IncidentStatus, TimelineEvent
+from app.models import IdempotencyRecord, Incident, IncidentStatus, OutboxEvent, TimelineEvent
 from app.schemas import CommentCreate, IncidentCreate, IncidentUpdate
 
 
 ACTIVE_STATUSES = {IncidentStatus.open, IncidentStatus.acknowledged}
+
+
+@dataclass(frozen=True)
+class EventContext:
+    producer: str
+    correlation_id: str
+    idempotency_key: str | None = None
 
 
 def get_incident_or_404(session: Session, incident_id: str, *, include_timeline: bool = False) -> Incident:
@@ -49,6 +57,7 @@ def create_incident(
     payload: IncidentCreate,
     actor: str | None = None,
     idempotency_key: str | None = None,
+    event_context: EventContext | None = None,
 ) -> Incident:
     incident = Incident(**payload.model_dump())
     session.add(incident)
@@ -65,12 +74,20 @@ def create_incident(
         message=f"Incident created with severity {incident.severity.value}",
         metadata={"severity": incident.severity.value, "service_name": incident.service_name},
     )
+    if event_context:
+        enqueue_incident_event(session, "incident.created", incident, event_context)
     session.commit()
     session.refresh(incident)
     return incident
 
 
-def update_incident(session: Session, incident: Incident, payload: IncidentUpdate, actor: str | None = None) -> Incident:
+def update_incident(
+    session: Session,
+    incident: Incident,
+    payload: IncidentUpdate,
+    actor: str | None = None,
+    event_context: EventContext | None = None,
+) -> Incident:
     changes = payload.model_dump(exclude_unset=True)
     requested_status = changes.pop("status", None)
     previous_status = incident.status
@@ -95,17 +112,29 @@ def update_incident(session: Session, incident: Incident, payload: IncidentUpdat
         message="Incident updated",
         metadata={"changed_fields": changed_fields},
     )
+    if event_context:
+        enqueue_incident_event(session, event_type, incident, event_context)
     session.commit()
     session.refresh(incident)
     return incident
 
 
-def acknowledge_incident(session: Session, incident: Incident, actor: str | None = None) -> Incident:
-    return update_incident(session, incident, IncidentUpdate(status=IncidentStatus.acknowledged), actor)
+def acknowledge_incident(
+    session: Session,
+    incident: Incident,
+    actor: str | None = None,
+    event_context: EventContext | None = None,
+) -> Incident:
+    return update_incident(session, incident, IncidentUpdate(status=IncidentStatus.acknowledged), actor, event_context)
 
 
-def resolve_incident(session: Session, incident: Incident, actor: str | None = None) -> Incident:
-    return update_incident(session, incident, IncidentUpdate(status=IncidentStatus.resolved), actor)
+def resolve_incident(
+    session: Session,
+    incident: Incident,
+    actor: str | None = None,
+    event_context: EventContext | None = None,
+) -> Incident:
+    return update_incident(session, incident, IncidentUpdate(status=IncidentStatus.resolved), actor, event_context)
 
 
 def add_comment(session: Session, incident: Incident, payload: CommentCreate) -> TimelineEvent:
@@ -164,3 +193,32 @@ def append_timeline(
     )
     session.add(event)
     return event
+
+
+def enqueue_incident_event(
+    session: Session,
+    event_type: str,
+    incident: Incident,
+    event_context: EventContext,
+) -> OutboxEvent:
+    event = OutboxEvent(
+        event_type=event_type,
+        producer=event_context.producer,
+        correlation_id=event_context.correlation_id,
+        idempotency_key=event_context.idempotency_key,
+        payload=incident_event_payload(incident),
+    )
+    session.add(event)
+    return event
+
+
+def incident_event_payload(incident: Incident) -> dict:
+    return {
+        "incident_id": incident.id,
+        "title": incident.title,
+        "severity": incident.severity.value,
+        "status": incident.status.value,
+        "service_name": incident.service_name,
+        "assignee_id": incident.assignee_id,
+        "alert_ids": incident.alert_ids,
+    }

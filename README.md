@@ -14,6 +14,7 @@ The first build slice implements the incident lifecycle foundation:
 
 - Services own their data stores. Cross-service IDs are external references, not database foreign keys.
 - Events use durable Redis Streams rather than fire-and-forget pub/sub.
+- Core incident lifecycle events are staged through a transactional outbox before publishing to Redis Streams.
 - APIs are protected by service API keys by default, with explicit public health endpoints.
 - Every request gets a correlation ID propagated through logs, responses, and events.
 - Mutating APIs support idempotency where duplicate client retries are expected.
