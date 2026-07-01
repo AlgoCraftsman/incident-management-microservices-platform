@@ -46,7 +46,14 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="On-Call Service", version="0.1.0", lifespan=lifespan)
 app.add_middleware(CorrelationIdMiddleware)
 
-protected = [Depends(require_api_key(parse_api_keys(settings.platform_api_keys)))]
+protected = [
+    Depends(
+        require_api_key(
+            parse_api_keys(settings.platform_api_keys),
+            required_scopes={f"{settings.service_name}:access"},
+        )
+    )
+]
 app.include_router(oncall_router, dependencies=protected)
 app.mount("/metrics", make_asgi_app())
 
