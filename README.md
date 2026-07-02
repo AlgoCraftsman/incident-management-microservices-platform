@@ -85,6 +85,14 @@ Optional integrations can be enabled through environment variables:
 
 All non-health service endpoints require `X-API-Key`. The default local key is `dev-platform-key`, and scoped API-key configuration is documented in `docs/authentication.md`.
 
+## Operational Endpoints
+
+Each service exposes public operational endpoints:
+
+- `/health`: lightweight liveness check for process availability.
+- `/ready`: readiness check that verifies database and Redis dependencies before traffic should be routed to the service.
+- `/metrics`: Prometheus metrics endpoint.
+
 ## Database Migrations
 
 Each service owns its database schema and ships its own Alembic migrations:
