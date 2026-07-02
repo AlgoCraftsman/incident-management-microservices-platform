@@ -4,7 +4,7 @@ import enum
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, Enum, Index, String, Text
+from sqlalchemy import DateTime, Enum, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import JSON
@@ -61,3 +61,20 @@ class Alert(Base):
 
 Index("ix_alerts_status_severity", Alert.status, Alert.severity)
 
+
+class OutboxEvent(Base):
+    __tablename__ = "outbox_events"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid_str)
+    event_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    event_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    producer: Mapped[str] = mapped_column(String(100), nullable=False)
+    correlation_id: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    idempotency_key: Mapped[str | None] = mapped_column(String(255))
+    payload: Mapped[dict] = mapped_column(json_type(), nullable=False, default=dict)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending", index=True)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    stream_id: Mapped[str | None] = mapped_column(String(100))
+    last_error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=now_utc)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -38,4 +38,4 @@ All platform events use a versioned envelope.
 
 ## Publishing Reliability
 
-`incidents-service` stages lifecycle events in a transactional outbox table before publishing them to Redis Streams. This keeps incident state changes and event intent in the same database transaction, then lets a background publisher retry Redis delivery until the event is marked published.
+`incidents-service` and `alerts-service` stage events in transactional outbox tables before publishing them to Redis Streams. This keeps state changes and event intent in the same database transaction, then lets a background publisher retry Redis delivery until each event is marked published.
