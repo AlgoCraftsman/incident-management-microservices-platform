@@ -8,6 +8,7 @@ dependencies = [
   "pydantic>=2.7,<3.0",
   "pydantic-settings>=2.2,<3.0",
   "redis>=5.0,<6.0",
+  "sqlalchemy>=2.0,<3.0",
 ]
 
 [build-system]
@@ -16,4 +17,3 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["platform_common*"]
-
