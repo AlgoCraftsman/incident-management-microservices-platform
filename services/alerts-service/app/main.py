@@ -3,10 +3,11 @@ from __future__ import annotations
 import asyncio
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
 from prometheus_client import make_asgi_app
 from redis.asyncio import Redis
 
+from app.db import SessionLocal
 from app.migrations import run_schema_migrations
 from app.outbox import publish_outbox_loop
 from app.routes.alerts import router as alerts_router
@@ -15,6 +16,7 @@ from platform_common.auth import parse_api_keys, require_api_key
 from platform_common.correlation import CorrelationIdMiddleware
 from platform_common.events import RedisStreamPublisher
 from platform_common.logging import configure_logging
+from platform_common.readiness import collect_readiness, database_check, redis_check
 
 
 @asynccontextmanager
@@ -52,3 +54,14 @@ app.mount("/metrics", make_asgi_app())
 @app.get("/health", tags=["health"])
 def health() -> dict[str, str]:
     return {"status": "ok", "service": settings.service_name}
+
+
+@app.get("/ready", tags=["health"])
+async def ready(request: Request) -> dict[str, object]:
+    return await collect_readiness(
+        settings.service_name,
+        {
+            "database": database_check(SessionLocal),
+            "redis": redis_check(request.app.state.redis),
+        },
+    )
