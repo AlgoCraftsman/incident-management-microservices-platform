@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 import httpx
@@ -8,9 +9,16 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Alert, AlertStatus
+from app.models import Alert, AlertStatus, OutboxEvent
 from app.schemas import AlertmanagerAlert, SuppressAlertRequest
 from app.settings import settings
+
+
+@dataclass(frozen=True)
+class EventContext:
+    producer: str
+    correlation_id: str
+    idempotency_key: str | None = None
 
 
 def compute_fingerprint(alert_name: str, labels: dict[str, str]) -> str:
@@ -19,7 +27,12 @@ def compute_fingerprint(alert_name: str, labels: dict[str, str]) -> str:
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
-def upsert_alert(session: Session, payload: AlertmanagerAlert, receiver: str | None) -> tuple[Alert, bool]:
+def upsert_alert(
+    session: Session,
+    payload: AlertmanagerAlert,
+    receiver: str | None,
+    event_context: EventContext | None = None,
+) -> tuple[Alert, bool]:
     alert_name = payload.labels.get("alertname", "unknown")
     source = payload.labels.get("source") or receiver or "unknown"
     severity = payload.labels.get("severity", "info")
@@ -31,6 +44,8 @@ def upsert_alert(session: Session, payload: AlertmanagerAlert, receiver: str | N
         existing.status = payload.status
         existing.ends_at = payload.ends_at
         existing.annotations = payload.annotations
+        if event_context:
+            enqueue_alert_event(session, "alert.received", existing, event_context, extra={"deduplicated": True})
         session.commit()
         session.refresh(existing)
         return existing, True
@@ -47,6 +62,9 @@ def upsert_alert(session: Session, payload: AlertmanagerAlert, receiver: str | N
         ends_at=payload.ends_at,
     )
     session.add(alert)
+    session.flush()
+    if event_context:
+        enqueue_alert_event(session, "alert.received", alert, event_context, extra={"deduplicated": False})
     session.commit()
     session.refresh(alert)
     return alert, False
@@ -84,8 +102,21 @@ async def promote_to_incident(alert: Alert, correlation_id: str) -> str:
     return response.json()["id"]
 
 
-def link_incident(session: Session, alert: Alert, incident_id: str) -> Alert:
+def link_incident(
+    session: Session,
+    alert: Alert,
+    incident_id: str,
+    event_context: EventContext | None = None,
+) -> Alert:
     alert.incident_id = incident_id
+    if event_context:
+        enqueue_alert_event(
+            session,
+            "alert.promoted_to_incident",
+            alert,
+            event_context,
+            extra={"incident_id": incident_id},
+        )
     session.commit()
     session.refresh(alert)
     return alert
@@ -98,11 +129,58 @@ def get_alert_or_404(session: Session, alert_id: str) -> Alert:
     return alert
 
 
-def suppress_alert(session: Session, alert: Alert, payload: SuppressAlertRequest) -> Alert:
+def suppress_alert(
+    session: Session,
+    alert: Alert,
+    payload: SuppressAlertRequest,
+    event_context: EventContext | None = None,
+) -> Alert:
     alert.status = AlertStatus.suppressed
     alert.suppression_until = datetime.now(UTC) + timedelta(minutes=payload.duration_minutes)
     alert.suppression_reason = payload.reason
+    if event_context:
+        enqueue_alert_event(
+            session,
+            "alert.suppressed",
+            alert,
+            event_context,
+            extra={"duration_minutes": payload.duration_minutes, "reason": payload.reason},
+        )
     session.commit()
     session.refresh(alert)
     return alert
 
+
+def enqueue_alert_event(
+    session: Session,
+    event_type: str,
+    alert: Alert,
+    event_context: EventContext,
+    *,
+    extra: dict | None = None,
+) -> OutboxEvent:
+    event = OutboxEvent(
+        event_type=event_type,
+        producer=event_context.producer,
+        correlation_id=event_context.correlation_id,
+        idempotency_key=event_context.idempotency_key,
+        payload=alert_event_payload(alert, extra=extra),
+    )
+    session.add(event)
+    return event
+
+
+def alert_event_payload(alert: Alert, *, extra: dict | None = None) -> dict:
+    payload = {
+        "alert_id": alert.id,
+        "source": alert.source,
+        "alert_name": alert.alert_name,
+        "fingerprint": alert.fingerprint,
+        "severity": alert.severity,
+        "status": alert.status.value,
+        "incident_id": alert.incident_id,
+        "labels": alert.labels,
+    }
+    if extra:
+        payload.update(extra)
+    return payload

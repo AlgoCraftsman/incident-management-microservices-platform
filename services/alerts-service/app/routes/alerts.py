@@ -11,9 +11,16 @@ from sqlalchemy.orm import Session
 from app.db import get_session
 from app.models import Alert, AlertStatus
 from app.schemas import AlertRead, AlertmanagerWebhook, SuppressAlertRequest, WebhookResult
-from app.services import get_alert_or_404, link_incident, promote_to_incident, should_promote, suppress_alert, upsert_alert
+from app.services import (
+    EventContext,
+    get_alert_or_404,
+    link_incident,
+    promote_to_incident,
+    should_promote,
+    suppress_alert,
+    upsert_alert,
+)
 from platform_common.correlation import get_correlation_id
-from platform_common.events import EventEnvelope
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/alerts", tags=["alerts"])
@@ -35,17 +42,10 @@ async def webhook(
     results: list[Alert] = []
 
     for incoming in payload.alerts:
-        alert, was_duplicate = upsert_alert(session, incoming, payload.receiver)
+        event_ctx = event_context(request, idempotency_key)
+        alert, was_duplicate = upsert_alert(session, incoming, payload.receiver, event_context=event_ctx)
         accepted += 1
         deduplicated += int(was_duplicate)
-
-        await publish_alert_event(
-            request,
-            "alert.received",
-            alert,
-            idempotency_key,
-            extra={"deduplicated": was_duplicate},
-        )
 
         if should_promote(alert):
             try:
@@ -56,15 +56,8 @@ async def webhook(
                     status_code=status.HTTP_502_BAD_GATEWAY,
                     detail="Incident promotion failed",
                 ) from exc
-            alert = link_incident(session, alert, incident_id)
+            alert = link_incident(session, alert, incident_id, event_context=event_ctx)
             promoted += 1
-            await publish_alert_event(
-                request,
-                "alert.promoted_to_incident",
-                alert,
-                idempotency_key,
-                extra={"incident_id": incident_id},
-            )
 
         results.append(alert)
 
@@ -115,43 +108,12 @@ async def suppress(
     idempotency_key: IdempotencyHeader = None,
 ) -> Alert:
     alert = get_alert_or_404(session, alert_id)
-    updated = suppress_alert(session, alert, payload)
-    await publish_alert_event(
-        request,
-        "alert.suppressed",
-        updated,
-        idempotency_key,
-        extra={"duration_minutes": payload.duration_minutes, "reason": payload.reason},
-    )
-    return updated
+    return suppress_alert(session, alert, payload, event_context=event_context(request, idempotency_key))
 
 
-async def publish_alert_event(
-    request: Request,
-    event_type: str,
-    alert: Alert,
-    idempotency_key: str | None,
-    *,
-    extra: dict | None = None,
-) -> None:
-    payload = {
-        "alert_id": alert.id,
-        "source": alert.source,
-        "alert_name": alert.alert_name,
-        "fingerprint": alert.fingerprint,
-        "severity": alert.severity,
-        "status": alert.status.value,
-        "incident_id": alert.incident_id,
-        "labels": alert.labels,
-    }
-    if extra:
-        payload.update(extra)
-    envelope = EventEnvelope.create(
-        event_type=event_type,
+def event_context(request: Request, idempotency_key: str | None) -> EventContext:
+    return EventContext(
         producer=request.app.state.service_name,
         correlation_id=get_correlation_id(),
         idempotency_key=idempotency_key,
-        payload=payload,
     )
-    stream_id = await request.app.state.event_publisher.publish(envelope)
-    logger.info("published_event event_type=%s stream_id=%s alert_id=%s", event_type, stream_id, alert.id)

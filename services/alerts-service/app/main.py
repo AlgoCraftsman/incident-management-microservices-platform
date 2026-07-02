@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
@@ -7,6 +8,7 @@ from prometheus_client import make_asgi_app
 from redis.asyncio import Redis
 
 from app.migrations import run_schema_migrations
+from app.outbox import publish_outbox_loop
 from app.routes.alerts import router as alerts_router
 from app.settings import settings
 from platform_common.auth import parse_api_keys, require_api_key
@@ -23,9 +25,12 @@ async def lifespan(app: FastAPI):
     app.state.redis = redis
     app.state.event_publisher = RedisStreamPublisher(redis, settings.event_stream_name)
     app.state.service_name = settings.service_name
+    outbox_task = asyncio.create_task(publish_outbox_loop(app.state.event_publisher))
     try:
         yield
     finally:
+        outbox_task.cancel()
+        await asyncio.gather(outbox_task, return_exceptions=True)
         await redis.aclose()
 
 
