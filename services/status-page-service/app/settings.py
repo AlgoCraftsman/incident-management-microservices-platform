@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     event_stream_name: str = "incident-platform-events"
     event_consumer_group: str = "status-page-service"
+    event_consumer_name: str | None = None
     platform_api_keys: str = "dev-platform-key"
 
 

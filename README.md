@@ -104,6 +104,18 @@ Each service owns its database schema and ships its own Alembic migrations:
 
 The local containers run migrations on startup. For production, use the same migrations from a deployment job before rolling application replicas.
 
+## Kubernetes
+
+Phase 3 Kubernetes manifests live under `infra/k8s/base` and can be rendered or applied with Kustomize:
+
+```bash
+kubectl kustomize infra/k8s/base
+kubectl apply -k infra/k8s/base
+kubectl -n incident-platform get pods
+```
+
+The base deploys Redis, one PostgreSQL StatefulSet per service, and all four APIs with readiness probes, liveness probes, resource requests/limits, rolling updates, and HPAs. The checked-in Kubernetes secrets contain local development values only; replace them with managed secrets before using the manifests outside a local cluster.
+
 ## Project Layout
 
 ```text
@@ -113,6 +125,8 @@ The local containers run migrations on startup. For production, use the same mig
 |   |-- examples/
 |   |-- openapi/
 |   `-- event-contracts.md
+|-- infra/
+|   `-- k8s/
 |-- libs/
 |   `-- platform_common/
 |-- scripts/

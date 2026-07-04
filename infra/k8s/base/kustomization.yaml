@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: incident-platform
+resources:
+  - namespace.yaml
+  - platform-secrets.yaml
+  - redis.yaml
+  - postgres-alerts.yaml
+  - postgres-incidents.yaml
+  - postgres-oncall.yaml
+  - postgres-status-page.yaml
+  - incidents-service.yaml
+  - alerts-service.yaml
+  - oncall-service.yaml
+  - status-page-service.yaml
+
