@@ -1,0 +1,120 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: alerts-service
+  labels:
+    app.kubernetes.io/name: alerts-service
+    app.kubernetes.io/part-of: incident-platform
+spec:
+  ports:
+    - name: http
+      port: 8002
+      targetPort: http
+  selector:
+    app.kubernetes.io/name: alerts-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alerts-service
+  labels:
+    app.kubernetes.io/name: alerts-service
+    app.kubernetes.io/part-of: incident-platform
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: alerts-service
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: alerts-service
+        app.kubernetes.io/part-of: incident-platform
+    spec:
+      containers:
+        - name: alerts-service
+          image: ghcr.io/algocraftsman/incident-management-microservices-platform/alerts-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8002
+          env:
+            - name: SERVICE_NAME
+              value: alerts-service
+            - name: REDIS_URL
+              value: redis://redis:6379/0
+            - name: EVENT_STREAM_NAME
+              value: incident-platform-events
+            - name: INCIDENTS_SERVICE_URL
+              value: http://incidents-service:8001
+          envFrom:
+            - secretRef:
+                name: platform-shared-secrets
+            - secretRef:
+                name: alerts-db-secrets
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 20
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: alerts-service
+  labels:
+    app.kubernetes.io/name: alerts-service
+    app.kubernetes.io/part-of: incident-platform
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: alerts-service
+  minReplicas: 2
+  maxReplicas: 8
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80

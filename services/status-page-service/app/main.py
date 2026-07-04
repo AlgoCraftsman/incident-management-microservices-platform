@@ -90,7 +90,7 @@ async def consume_incident_events(redis: Redis) -> None:
     while True:
         messages = await redis.xreadgroup(
             settings.event_consumer_group,
-            settings.service_name,
+            settings.event_consumer_name or settings.service_name,
             {settings.event_stream_name: ">"},
             count=10,
             block=5000,
