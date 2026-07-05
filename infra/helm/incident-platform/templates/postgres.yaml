@@ -1,0 +1,82 @@
+{{- if .Values.postgres.enabled }}
+{{- range $key, $db := .Values.databases }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $db.name }}
+  labels:
+    {{- include "incident-platform.commonLabels" $ | nindent 4 }}
+    app.kubernetes.io/name: {{ $db.name }}
+spec:
+  ports:
+    - name: postgres
+      port: {{ $.Values.postgres.port }}
+      targetPort: postgres
+  selector:
+    app.kubernetes.io/name: {{ $db.name }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $db.name }}
+  labels:
+    {{- include "incident-platform.commonLabels" $ | nindent 4 }}
+    app.kubernetes.io/name: {{ $db.name }}
+spec:
+  serviceName: {{ $db.name }}
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $db.name }}
+  template:
+    metadata:
+      labels:
+        {{- include "incident-platform.selectorLabels" (dict "name" $db.name) | nindent 8 }}
+    spec:
+      containers:
+        - name: postgres
+          image: {{ $.Values.postgres.image }}
+          imagePullPolicy: {{ $.Values.global.imagePullPolicy }}
+          env:
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          envFrom:
+            - secretRef:
+                name: {{ $db.secretName }}
+          ports:
+            - name: postgres
+              containerPort: {{ $.Values.postgres.port }}
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", {{ $db.username | quote }}, "-d", {{ $db.database | quote }}]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", {{ $db.username | quote }}, "-d", {{ $db.database | quote }}]
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            {{- toYaml $.Values.postgres.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ $db.storage }}
+{{- end }}
+{{- end }}
+
