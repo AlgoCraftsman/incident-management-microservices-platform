@@ -59,10 +59,6 @@ spec:
             periodSeconds: 20
           resources:
             {{- toYaml $.Values.postgres.resources | nindent 12 }}
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop: ["ALL"]
           volumeMounts:
             - name: postgres-data
               mountPath: /var/lib/postgresql/data
