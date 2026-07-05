@@ -1,0 +1,175 @@
+global:
+  imageRegistry: ghcr.io/algocraftsman/incident-management-microservices-platform
+  imagePullPolicy: IfNotPresent
+  eventStreamName: incident-platform-events
+  redisUrl: redis://redis:6379/0
+
+secrets:
+  platformApiKeys: dev-platform-key
+  internalApiKey: dev-platform-key
+
+redis:
+  enabled: true
+  name: redis
+  image: redis:7-alpine
+  port: 6379
+  storage: 1Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+databases:
+  incidents:
+    name: postgres-incidents
+    secretName: incidents-db-secrets
+    database: incidents
+    username: incidents
+    password: incidents
+    host: postgres-incidents
+    storage: 1Gi
+  alerts:
+    name: postgres-alerts
+    secretName: alerts-db-secrets
+    database: alerts
+    username: alerts
+    password: alerts
+    host: postgres-alerts
+    storage: 1Gi
+  oncall:
+    name: postgres-oncall
+    secretName: oncall-db-secrets
+    database: oncall
+    username: oncall
+    password: oncall
+    host: postgres-oncall
+    storage: 1Gi
+  statusPage:
+    name: postgres-status-page
+    secretName: status-page-db-secrets
+    database: status_page
+    username: status_page
+    password: status_page
+    host: postgres-status-page
+    storage: 1Gi
+
+postgres:
+  enabled: true
+  image: postgres:15-alpine
+  port: 5432
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+services:
+  incidents:
+    name: incidents-service
+    port: 8001
+    replicaCount: 2
+    image:
+      repository: incidents-service
+      tag: latest
+    databaseSecretName: incidents-db-secrets
+    env: {}
+    consumer:
+      enabled: false
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 8
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+
+  alerts:
+    name: alerts-service
+    port: 8002
+    replicaCount: 2
+    image:
+      repository: alerts-service
+      tag: latest
+    databaseSecretName: alerts-db-secrets
+    env:
+      INCIDENTS_SERVICE_URL: http://incidents-service:8001
+    consumer:
+      enabled: false
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 8
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+
+  oncall:
+    name: oncall-service
+    port: 8003
+    replicaCount: 2
+    image:
+      repository: oncall-service
+      tag: latest
+    databaseSecretName: oncall-db-secrets
+    env:
+      INCIDENTS_SERVICE_URL: http://incidents-service:8001
+      EVENT_CONSUMER_GROUP: oncall-service
+    consumer:
+      enabled: true
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 8
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+
+  statusPage:
+    name: status-page-service
+    port: 8004
+    replicaCount: 2
+    image:
+      repository: status-page-service
+      tag: latest
+    databaseSecretName: status-page-db-secrets
+    env:
+      EVENT_CONSUMER_GROUP: status-page-service
+    consumer:
+      enabled: true
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 8
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+

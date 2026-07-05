@@ -1,0 +1,38 @@
+global:
+  imagePullPolicy: Always
+
+secrets:
+  platformApiKeys: replace-me
+  internalApiKey: replace-me
+
+redis:
+  storage: 5Gi
+
+databases:
+  incidents:
+    password: replace-me
+    storage: 10Gi
+  alerts:
+    password: replace-me
+    storage: 10Gi
+  oncall:
+    password: replace-me
+    storage: 10Gi
+  statusPage:
+    password: replace-me
+    storage: 10Gi
+
+services:
+  incidents:
+    image:
+      tag: replace-with-git-sha
+  alerts:
+    image:
+      tag: replace-with-git-sha
+  oncall:
+    image:
+      tag: replace-with-git-sha
+  statusPage:
+    image:
+      tag: replace-with-git-sha
+

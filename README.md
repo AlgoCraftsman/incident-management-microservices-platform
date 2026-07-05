@@ -116,6 +116,13 @@ kubectl -n incident-platform get pods
 
 The base deploys Redis, one PostgreSQL StatefulSet per service, and all four APIs with readiness probes, liveness probes, resource requests/limits, rolling updates, and HPAs. The checked-in Kubernetes secrets contain local development values only; replace them with managed secrets before using the manifests outside a local cluster.
 
+Helm chart packaging lives under `infra/helm/incident-platform`:
+
+```bash
+helm template incident-platform infra/helm/incident-platform --namespace incident-platform --create-namespace
+helm upgrade --install incident-platform infra/helm/incident-platform --namespace incident-platform --create-namespace
+```
+
 ## Project Layout
 
 ```text
@@ -126,6 +133,7 @@ The base deploys Redis, one PostgreSQL StatefulSet per service, and all four API
 |   |-- openapi/
 |   `-- event-contracts.md
 |-- infra/
+|   |-- helm/
 |   `-- k8s/
 |-- libs/
 |   `-- platform_common/
