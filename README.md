@@ -123,6 +123,8 @@ helm template incident-platform infra/helm/incident-platform --namespace inciden
 helm upgrade --install incident-platform infra/helm/incident-platform --namespace incident-platform --create-namespace
 ```
 
+CI validates the deployment packaging by linting the Helm chart, rendering both the raw Kustomize base and Helm chart variants, and checking the rendered manifests against Kubernetes schemas with kubeconform.
+
 ## Project Layout
 
 ```text
@@ -166,6 +168,10 @@ docker compose up --build
 python scripts/phase1_smoke_test.py
 python scripts/phase2_smoke_test.py
 python scripts/export_openapi.py --check
+helm lint infra/helm/incident-platform
+helm lint infra/helm/incident-platform -f infra/helm/incident-platform/values-prod.yaml
+kubectl kustomize infra/k8s/base
+helm template incident-platform infra/helm/incident-platform --namespace incident-platform --create-namespace
 ```
 
 ## API Contracts
