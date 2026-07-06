@@ -112,6 +112,36 @@ jobs:
           ignore-unfixed: true
           exit-code: "1"
 
+  deployment-manifests:
+    name: Kubernetes and Helm manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Helm
+        uses: azure/setup-helm@v5.0.1
+        with:
+          version: v3.18.4
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v5.1.0
+      - name: Lint Helm chart
+        run: |
+          helm lint infra/helm/incident-platform
+          helm lint infra/helm/incident-platform -f infra/helm/incident-platform/values-prod.yaml
+      - name: Render Kubernetes and Helm manifests
+        run: |
+          mkdir -p rendered
+          kubectl kustomize infra/k8s/base > rendered/k8s-base.yaml
+          helm template incident-platform infra/helm/incident-platform --namespace incident-platform --create-namespace > rendered/helm-default.yaml
+          helm template incident-platform infra/helm/incident-platform --namespace incident-platform --create-namespace -f infra/helm/incident-platform/values-prod.yaml > rendered/helm-prod.yaml
+      - name: Validate rendered manifests
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work ghcr.io/yannh/kubeconform:v0.8.0 \
+            -strict \
+            -summary \
+            rendered/k8s-base.yaml \
+            rendered/helm-default.yaml \
+            rendered/helm-prod.yaml
+
   checkov:
     name: Checkov
     runs-on: ubuntu-latest
