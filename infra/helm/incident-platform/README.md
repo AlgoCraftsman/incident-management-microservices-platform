@@ -49,3 +49,5 @@ helm template incident-platform infra/helm/incident-platform \
 The default `values.yaml` keeps the project free to run locally by using in-cluster PostgreSQL, Redis, and mock/local secrets. Replace `values-prod.yaml` placeholders with real secret management and immutable image tags before using the chart outside a local cluster.
 
 PostgreSQL and Redis run with their upstream image defaults so they can initialize and own mounted data directories correctly. The application containers still run as non-root with privilege escalation disabled.
+
+Network policies are enabled by default. They allow HTTP traffic between platform services, restrict each PostgreSQL instance to its owning service, and restrict Redis ingress to platform services.
