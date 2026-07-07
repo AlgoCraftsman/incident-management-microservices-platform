@@ -36,6 +36,7 @@ spec:
         app.kubernetes.io/name: alerts-service
         app.kubernetes.io/part-of: incident-platform
     spec:
+      automountServiceAccountToken: false
       containers:
         - name: alerts-service
           image: ghcr.io/algocraftsman/incident-management-microservices-platform/alerts-service:latest

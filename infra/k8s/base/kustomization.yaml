@@ -4,6 +4,7 @@ namespace: incident-platform
 resources:
   - namespace.yaml
   - platform-secrets.yaml
+  - network-policies.yaml
   - redis.yaml
   - postgres-alerts.yaml
   - postgres-incidents.yaml

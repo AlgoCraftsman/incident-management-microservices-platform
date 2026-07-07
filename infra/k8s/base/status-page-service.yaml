@@ -36,6 +36,7 @@ spec:
         app.kubernetes.io/name: status-page-service
         app.kubernetes.io/part-of: incident-platform
     spec:
+      automountServiceAccountToken: false
       containers:
         - name: status-page-service
           image: ghcr.io/algocraftsman/incident-management-microservices-platform/status-page-service:latest

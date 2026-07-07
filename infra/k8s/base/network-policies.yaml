@@ -1,0 +1,141 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-platform-service-http
+  labels:
+    app.kubernetes.io/part-of: incident-platform
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: In
+        values:
+          - incidents-service
+          - alerts-service
+          - oncall-service
+          - status-page-service
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 8001
+        - protocol: TCP
+          port: 8002
+        - protocol: TCP
+          port: 8003
+        - protocol: TCP
+          port: 8004
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-incidents-postgres
+  labels:
+    app.kubernetes.io/part-of: incident-platform
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: postgres-incidents
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: incidents-service
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-alerts-postgres
+  labels:
+    app.kubernetes.io/part-of: incident-platform
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: postgres-alerts
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: alerts-service
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-oncall-postgres
+  labels:
+    app.kubernetes.io/part-of: incident-platform
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: postgres-oncall
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: oncall-service
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-status-page-postgres
+  labels:
+    app.kubernetes.io/part-of: incident-platform
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: postgres-status-page
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: status-page-service
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-platform-redis
+  labels:
+    app.kubernetes.io/part-of: incident-platform
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - incidents-service
+                  - alerts-service
+                  - oncall-service
+                  - status-page-service
+      ports:
+        - protocol: TCP
+          port: 6379

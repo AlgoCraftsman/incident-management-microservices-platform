@@ -1,0 +1,79 @@
+{{- if .Values.networkPolicies.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-platform-service-http
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "incident-platform.commonLabels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: In
+        values:
+          {{- range $key, $svc := .Values.services }}
+          - {{ $svc.name | quote }}
+          {{- end }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
+      ports:
+        {{- range $key, $svc := .Values.services }}
+        - protocol: TCP
+          port: {{ $svc.port }}
+        {{- end }}
+{{- range $key, $svc := .Values.services }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-{{ $svc.name }}-postgres
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "incident-platform.commonLabels" $ | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $svc.databaseName }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: {{ $svc.name }}
+      ports:
+        - protocol: TCP
+          port: {{ $.Values.postgres.port }}
+{{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-platform-redis
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "incident-platform.commonLabels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: {{ .Values.redis.name }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  {{- range $key, $svc := .Values.services }}
+                  - {{ $svc.name | quote }}
+                  {{- end }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.redis.port }}
+{{- end }}

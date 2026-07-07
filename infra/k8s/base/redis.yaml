@@ -32,6 +32,7 @@ spec:
         app.kubernetes.io/name: redis
         app.kubernetes.io/part-of: incident-platform
     spec:
+      automountServiceAccountToken: false
       containers:
         - name: redis
           image: redis:7-alpine

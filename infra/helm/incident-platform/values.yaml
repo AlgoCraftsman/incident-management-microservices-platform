@@ -68,6 +68,9 @@ postgres:
       cpu: 500m
       memory: 512Mi
 
+networkPolicies:
+  enabled: true
+
 services:
   incidents:
     name: incidents-service
@@ -77,6 +80,7 @@ services:
       repository: incidents-service
       tag: latest
     databaseSecretName: incidents-db-secrets
+    databaseName: postgres-incidents
     env: {}
     consumer:
       enabled: false
@@ -102,6 +106,7 @@ services:
       repository: alerts-service
       tag: latest
     databaseSecretName: alerts-db-secrets
+    databaseName: postgres-alerts
     env:
       INCIDENTS_SERVICE_URL: http://incidents-service:8001
     consumer:
@@ -128,6 +133,7 @@ services:
       repository: oncall-service
       tag: latest
     databaseSecretName: oncall-db-secrets
+    databaseName: postgres-oncall
     env:
       INCIDENTS_SERVICE_URL: http://incidents-service:8001
       EVENT_CONSUMER_GROUP: oncall-service
@@ -155,6 +161,7 @@ services:
       repository: status-page-service
       tag: latest
     databaseSecretName: status-page-db-secrets
+    databaseName: postgres-status-page
     env:
       EVENT_CONSUMER_GROUP: status-page-service
     consumer:
