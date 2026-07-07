@@ -123,7 +123,7 @@ helm template incident-platform infra/helm/incident-platform --namespace inciden
 helm upgrade --install incident-platform infra/helm/incident-platform --namespace incident-platform --create-namespace
 ```
 
-CI validates the deployment packaging by linting the Helm chart, rendering both the raw Kustomize base and Helm chart variants, and checking the rendered manifests against Kubernetes schemas with kubeconform.
+CI validates the deployment packaging by linting the Helm chart, rendering both the raw Kustomize base and Helm chart variants, checking the rendered manifests against Kubernetes schemas with kubeconform, and running targeted Checkov controls for namespaces, service account tokens, and NetworkPolicies.
 
 ## Project Layout
 
