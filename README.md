@@ -125,6 +125,8 @@ helm upgrade --install incident-platform infra/helm/incident-platform --namespac
 
 CI validates the deployment packaging by linting the Helm chart, rendering both the raw Kustomize base and Helm chart variants, checking the rendered manifests against Kubernetes schemas with kubeconform, and running targeted Checkov controls for namespaces, service account tokens, and NetworkPolicies.
 
+On pushes to `main`, CI publishes each service image to GitHub Container Registry with the commit SHA as an immutable tag and `latest` for the default branch.
+
 ## Project Layout
 
 ```text
