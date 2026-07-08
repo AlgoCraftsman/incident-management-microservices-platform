@@ -141,13 +141,20 @@ jobs:
             rendered/k8s-base.yaml \
             rendered/helm-default.yaml \
             rendered/helm-prod.yaml
+      - name: Run Checkov IaC policy gate
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work bridgecrew/checkov@sha256:39894d0672bb53c913b9784614f05c98de167cb2041ff96aa53dbd64a0b4a159 \
+            --directory rendered \
+            --framework kubernetes \
+            --check CKV_K8S_21,CKV_K8S_38,CKV2_K8S_6 \
+            --quiet
 
   checkov:
-    name: Checkov
+    name: Checkov Dockerfiles
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Run Checkov
+      - name: Run Checkov Dockerfile scan
         uses: bridgecrewio/checkov-action@v12.1347.0
         with:
           directory: .
