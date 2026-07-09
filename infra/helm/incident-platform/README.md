@@ -53,8 +53,12 @@ helm upgrade --install incident-platform infra/helm/incident-platform \
   --namespace incident-platform \
   --create-namespace \
   -f infra/helm/incident-platform/values-prod.yaml \
-  --set global.imageTag=<git-sha>
+  --set-string global.imageTag=<git-sha>
 ```
+
+The repository also includes a manual `Deploy Helm Release` GitHub Actions
+workflow for environment-gated deployments. See `docs/release-deployment.md` for
+required environment secrets, workflow inputs, verification, and rollback steps.
 
 The default `values.yaml` keeps the project free to run locally by using in-cluster PostgreSQL, Redis, and mock/local secrets. Replace `values-prod.yaml` placeholders with real secret management and immutable image tags before using the chart outside a local cluster.
 

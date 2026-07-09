@@ -134,8 +134,14 @@ helm upgrade --install incident-platform infra/helm/incident-platform \
   --namespace incident-platform \
   --create-namespace \
   -f infra/helm/incident-platform/values-prod.yaml \
-  --set global.imageTag=<git-sha>
+  --set-string global.imageTag=<git-sha>
 ```
+
+For environment-gated releases, use the `Deploy Helm Release` GitHub Actions
+workflow or follow `docs/release-deployment.md`. The workflow verifies the GHCR
+image set for the target SHA, injects production secrets from the selected
+GitHub environment, runs `helm upgrade --install`, and waits for all service
+rollouts.
 
 ## Project Layout
 
@@ -145,6 +151,7 @@ helm upgrade --install incident-platform infra/helm/incident-platform \
 |   |-- adr/
 |   |-- examples/
 |   |-- openapi/
+|   |-- release-deployment.md
 |   `-- event-contracts.md
 |-- infra/
 |   |-- helm/
