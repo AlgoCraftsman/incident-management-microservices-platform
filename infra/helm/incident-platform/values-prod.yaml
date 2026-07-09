@@ -1,4 +1,5 @@
 global:
+  imageTag: replace-with-git-sha
   imagePullPolicy: Always
 
 secrets:
@@ -21,18 +22,4 @@ databases:
   statusPage:
     password: replace-me
     storage: 10Gi
-
-services:
-  incidents:
-    image:
-      tag: replace-with-git-sha
-  alerts:
-    image:
-      tag: replace-with-git-sha
-  oncall:
-    image:
-      tag: replace-with-git-sha
-  statusPage:
-    image:
-      tag: replace-with-git-sha
 

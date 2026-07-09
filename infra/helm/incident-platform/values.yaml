@@ -1,5 +1,6 @@
 global:
   imageRegistry: ghcr.io/algocraftsman/incident-management-microservices-platform
+  imageTag: ""
   imagePullPolicy: IfNotPresent
   eventStreamName: incident-platform-events
   redisUrl: redis://redis:6379/0
