@@ -127,6 +127,16 @@ CI validates the deployment packaging by linting the Helm chart, rendering both 
 
 On pushes to `main`, CI publishes each service image to GitHub Container Registry with the commit SHA as an immutable tag and `latest` for the default branch.
 
+Deploy a published image set with Helm by passing the release commit SHA once:
+
+```bash
+helm upgrade --install incident-platform infra/helm/incident-platform \
+  --namespace incident-platform \
+  --create-namespace \
+  -f infra/helm/incident-platform/values-prod.yaml \
+  --set global.imageTag=<git-sha>
+```
+
 ## Project Layout
 
 ```text

@@ -16,7 +16,8 @@ app.kubernetes.io/part-of: incident-platform
 {{- define "incident-platform.image" -}}
 {{- $root := .root -}}
 {{- $image := .image -}}
-{{- printf "%s/%s:%s" $root.Values.global.imageRegistry $image.repository $image.tag -}}
+{{- $tag := default $image.tag $root.Values.global.imageTag -}}
+{{- printf "%s/%s:%s" $root.Values.global.imageRegistry $image.repository $tag -}}
 {{- end }}
 
 {{- define "incident-platform.databaseUrl" -}}
