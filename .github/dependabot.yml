@@ -1,0 +1,80 @@
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/New_York
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: ci
+      include: scope
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  - package-ecosystem: docker
+    directories:
+      - /services/*-service
+      - /infra/k8s/base
+      - /infra/helm/incident-platform
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:30"
+      timezone: America/New_York
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      service-base-images:
+        patterns:
+          - "python"
+      infrastructure-images:
+        patterns:
+          - "postgres"
+          - "redis"
+
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "10:00"
+      timezone: America/New_York
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      local-infrastructure-images:
+        patterns:
+          - "postgres"
+          - "redis"
+
+  - package-ecosystem: pip
+    directories:
+      - /services/*-service
+      - /libs/platform_common
+    schedule:
+      interval: weekly
+      day: tuesday
+      time: "09:00"
+      timezone: America/New_York
+    open-pull-requests-limit: 8
+    commit-message:
+      prefix: deps
+      include: scope
+    groups:
+      python-runtime:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+        group-by: dependency-name
