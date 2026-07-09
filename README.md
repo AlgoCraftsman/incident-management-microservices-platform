@@ -128,9 +128,9 @@ CI validates the deployment packaging by linting the Helm chart, rendering both 
 On pushes to `main`, CI publishes each service image to GitHub Container Registry with the commit SHA as an immutable tag and `latest` for the default branch.
 
 Dependabot monitors GitHub Actions, Docker, Docker Compose, and Python dependency
-manifests. Pull requests also run a dependency-review gate for newly introduced
-high-severity vulnerabilities and license policy violations. See
-`docs/supply-chain-security.md` for the dependency maintenance process.
+manifests. Pull requests also run a Python dependency audit for known vulnerable
+packages in each service requirements file. See `docs/supply-chain-security.md`
+for the dependency maintenance process.
 
 Deploy a published image set with Helm by passing the release commit SHA once:
 

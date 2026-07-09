@@ -1,7 +1,7 @@
 # Supply Chain Security
 
-The platform uses automated dependency monitoring and pull request review gates
-to keep runtime, build, and workflow dependencies visible.
+The platform uses automated dependency monitoring and pull request audit gates to
+keep runtime, build, and workflow dependencies visible.
 
 ## Dependabot Version Updates
 
@@ -18,17 +18,18 @@ Python minor and patch updates are grouped by dependency name across service
 directories so shared runtime dependencies move together. Major updates remain
 separate for more deliberate review.
 
-## Pull Request Dependency Review
+## Pull Request Dependency Audit
 
-The `Dependency Review` workflow runs on every pull request. It blocks changes
-that introduce:
+The `Dependency Audit` workflow runs on every pull request and on pushes to
+`main`. It audits each service requirements file with `pip-audit` and blocks
+known vulnerable Python dependency resolutions before merge.
 
-- Runtime, development, or unknown-scope vulnerabilities at high severity or
-  higher.
-- Dependencies outside the configured permissive-license allow list.
+The workflow does not depend on GitHub Advanced Security or the repository
+dependency review API. That keeps the PR gate portable for repositories where
+GitHub dependency review is not available.
 
-The workflow also includes OpenSSF Scorecard and patched-version details in the
-job output to make dependency review easier during PR triage.
+GitHub's Dependency Review action can be reintroduced later if dependency graph
+and GitHub Advanced Security support are enabled for the repository.
 
 ## Operator Notes
 
