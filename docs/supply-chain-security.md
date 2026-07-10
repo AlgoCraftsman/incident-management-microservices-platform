@@ -44,6 +44,14 @@ Pull request builds still compile and scan images, but attestation publishing is
 limited to main-branch GHCR releases because unpublished PR images do not have a
 registry artifact to attach attestations to.
 
+## Workflow Token Permissions
+
+GitHub Actions workflows default to read-only repository contents access unless
+a job needs a broader scope. The main CI workflow grants `packages: write` only
+to the image build job because that job publishes GHCR images on `main`. Test,
+manifest validation, dependency audit, and deployment jobs do not receive package
+write access.
+
 ## Operator Notes
 
 Treat Dependabot PRs like application changes:
