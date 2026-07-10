@@ -31,6 +31,19 @@ GitHub dependency review is not available.
 GitHub's Dependency Review action can be reintroduced later if dependency graph
 and GitHub Advanced Security support are enabled for the repository.
 
+## Release Image Attestations
+
+CI publishes service images to GitHub Container Registry on pushes to `main`.
+Those release-image builds generate:
+
+- SBOM attestations for package inventory visibility.
+- Provenance attestations with `mode=max` for build metadata and source
+  traceability.
+
+Pull request builds still compile and scan images, but attestation publishing is
+limited to main-branch GHCR releases because unpublished PR images do not have a
+registry artifact to attach attestations to.
+
 ## Operator Notes
 
 Treat Dependabot PRs like application changes:
