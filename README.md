@@ -125,7 +125,9 @@ helm upgrade --install incident-platform infra/helm/incident-platform --namespac
 
 CI validates the deployment packaging by linting the Helm chart, rendering both the raw Kustomize base and Helm chart variants, checking the rendered manifests against Kubernetes schemas with kubeconform, and running targeted Checkov controls for namespaces, service account tokens, and NetworkPolicies.
 
-On pushes to `main`, CI publishes each service image to GitHub Container Registry with the commit SHA as an immutable tag and `latest` for the default branch.
+On pushes to `main`, CI publishes each service image to GitHub Container
+Registry with the commit SHA as an immutable tag and `latest` for the default
+branch. Published release images include SBOM and provenance attestations.
 
 Dependabot monitors GitHub Actions, Docker, Docker Compose, and Python dependency
 manifests. Pull requests also run a Python dependency audit for known vulnerable

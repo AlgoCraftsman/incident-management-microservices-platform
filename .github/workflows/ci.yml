@@ -100,6 +100,8 @@ jobs:
           context: .
           file: services/${{ matrix.service }}/Dockerfile
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          sbom: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          provenance: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'mode=max' || 'false' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
