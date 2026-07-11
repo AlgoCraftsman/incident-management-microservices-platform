@@ -12,6 +12,7 @@ jobs:
   python-dependencies:
     name: Python dependencies (${{ matrix.service }})
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
