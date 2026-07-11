@@ -12,7 +12,7 @@ Dependabot is configured in `.github/dependabot.yml` for:
 | GitHub Actions | `.github/workflows` | Weekly on Monday |
 | Docker | Service Dockerfiles, Kubernetes base manifests, and Helm chart image references | Weekly on Monday |
 | Docker Compose | Local PostgreSQL and Redis images | Weekly on Monday |
-| Pip | Service requirements and `platform-common` | Weekly on Tuesday |
+| Pip | Security tooling, service requirements, and `platform-common` | Weekly on Tuesday |
 
 Python minor and patch updates are grouped by dependency name across service
 directories so shared runtime dependencies move together. Major updates remain
@@ -23,6 +23,10 @@ separate for more deliberate review.
 The `Dependency Audit` workflow runs on every pull request and on pushes to
 `main`. It audits each service requirements file with `pip-audit` and blocks
 known vulnerable Python dependency resolutions before merge.
+
+The `pip-audit` CLI version is pinned in `.github/requirements-security.txt`
+instead of installed as an unbounded latest package. Dependabot monitors that
+pin with the rest of the Python dependency manifests.
 
 The workflow does not depend on GitHub Advanced Security or the repository
 dependency review API. That keeps the PR gate portable for repositories where

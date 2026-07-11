@@ -59,6 +59,7 @@ updates:
 
   - package-ecosystem: pip
     directories:
+      - /.github
       - /services/*-service
       - /libs/platform_common
     schedule:
