@@ -52,6 +52,14 @@ to the image build job because that job publishes GHCR images on `main`. Test,
 manifest validation, dependency audit, and deployment jobs do not receive package
 write access.
 
+## Workflow Runtime Bounds
+
+CI, dependency audit, and deployment jobs define explicit `timeout-minutes`
+limits. Short validation jobs fail quickly when package resolution, scanner
+execution, or cluster calls hang. Image build and deployment jobs get larger
+budgets because they perform Docker builds, registry checks, Helm waits, and
+rollout verification.
+
 ## Operator Notes
 
 Treat Dependabot PRs like application changes:

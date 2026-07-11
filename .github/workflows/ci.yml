@@ -12,6 +12,7 @@ jobs:
   api-contracts:
     name: API contracts
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -30,6 +31,7 @@ jobs:
   test:
     name: Test ${{ matrix.service }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -50,6 +52,7 @@ jobs:
   test-common:
     name: Test platform-common
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -66,6 +69,7 @@ jobs:
   build:
     name: Build ${{ matrix.service }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: [api-contracts, test, test-common]
     permissions:
       contents: read
@@ -109,6 +113,7 @@ jobs:
   trivy:
     name: Trivy ${{ matrix.service }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: build
     strategy:
       fail-fast: false
@@ -131,6 +136,7 @@ jobs:
   deployment-manifests:
     name: Kubernetes and Helm manifests
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - name: Set up Helm
@@ -168,6 +174,7 @@ jobs:
   checkov:
     name: Checkov Dockerfiles
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - name: Run Checkov Dockerfile scan
