@@ -189,14 +189,16 @@ jobs:
           chmod 600 "$secret_dir"/*
           echo "SECRET_VALUES_DIR=$secret_dir" >> "$GITHUB_ENV"
 
-      - name: Render release manifests
+      - name: Dry-run release with hidden secrets
         shell: bash
         run: |
           set -euo pipefail
 
-          helm template "$RELEASE_NAME" "$CHART_PATH" \
+          helm upgrade --install "$RELEASE_NAME" "$CHART_PATH" \
             --namespace "$NAMESPACE" \
             --create-namespace \
+            --dry-run=client \
+            --hide-secret \
             -f "$VALUES_FILE" \
             --set-string "global.imageTag=$IMAGE_SHA" \
             --set-file "secrets.platformApiKeys=$SECRET_VALUES_DIR/platform_api_keys" \
@@ -205,7 +207,7 @@ jobs:
             --set-file "databases.alerts.password=$SECRET_VALUES_DIR/alerts_db_password" \
             --set-file "databases.oncall.password=$SECRET_VALUES_DIR/oncall_db_password" \
             --set-file "databases.statusPage.password=$SECRET_VALUES_DIR/status_page_db_password" \
-            > release-manifest.yaml
+            > "$RUNNER_TEMP/release-dry-run.txt"
 
       - name: Deploy release
         shell: bash

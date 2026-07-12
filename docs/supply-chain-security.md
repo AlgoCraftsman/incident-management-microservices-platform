@@ -64,6 +64,14 @@ execution, or cluster calls hang. Image build and deployment jobs get larger
 budgets because they perform Docker builds, registry checks, Helm waits, and
 rollout verification.
 
+## Deployment Secret Handling
+
+The release deployment workflow passes secret values to Helm from temporary
+files and runs its pre-deploy Helm dry-run with `--hide-secret`. Sanitized
+dry-run output is written under the runner temporary directory rather than the
+repository workspace, reducing the chance that rendered Kubernetes Secret values
+are retained in workflow files.
+
 ## Operator Notes
 
 Treat Dependabot PRs like application changes:
