@@ -41,6 +41,10 @@ Before deploying, the workflow runs a client-side Helm dry-run with
 temporary directory instead of the repository workspace so rendered Kubernetes
 Secret values are not retained as workspace files.
 
+Helm secret override files are created under the runner temporary directory,
+used for dry-run and deployment commands, and removed in a final cleanup step
+that runs even when deployment fails.
+
 ## Manual Deployment
 
 For an operator workstation with cluster access and Helm installed:
