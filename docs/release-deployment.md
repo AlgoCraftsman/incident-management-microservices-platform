@@ -36,6 +36,11 @@ The workflow fails before deployment if required secrets are missing, the image
 tag is not a 40-character lowercase commit SHA, or any service image is missing
 from GHCR.
 
+Before deploying, the workflow runs a client-side Helm dry-run with
+`--hide-secret`. The sanitized dry-run output is written under the runner
+temporary directory instead of the repository workspace so rendered Kubernetes
+Secret values are not retained as workspace files.
+
 ## Manual Deployment
 
 For an operator workstation with cluster access and Helm installed:
