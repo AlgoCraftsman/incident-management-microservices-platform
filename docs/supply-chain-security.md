@@ -70,7 +70,9 @@ The release deployment workflow passes secret values to Helm from temporary
 files and runs its pre-deploy Helm dry-run with `--hide-secret`. Sanitized
 dry-run output is written under the runner temporary directory rather than the
 repository workspace, reducing the chance that rendered Kubernetes Secret values
-are retained in workflow files.
+are retained in workflow files. The temporary Helm secret files are removed in a
+final cleanup step that runs after both successful and failed deployment
+attempts.
 
 ## Operator Notes
 

@@ -253,3 +253,13 @@ jobs:
             echo "- Image tag: $IMAGE_SHA"
             echo "- Image repository: $IMAGE_REPOSITORY"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Clean up Helm secret files
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -n "${SECRET_VALUES_DIR:-}" ] && [ -d "$SECRET_VALUES_DIR" ]; then
+            rm -rf "$SECRET_VALUES_DIR"
+          fi
