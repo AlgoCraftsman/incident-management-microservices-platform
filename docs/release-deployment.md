@@ -9,6 +9,8 @@ chart.
 
 Use the `Deploy Helm Release` workflow for environment-gated deployments. Run it
 from the Actions tab after the target commit has completed CI on `main`.
+Configure environment reviewers, deployment branch restrictions, and GHCR
+access before first use as described in `docs/github-operations-runbook.md`.
 
 Required GitHub environment secrets:
 

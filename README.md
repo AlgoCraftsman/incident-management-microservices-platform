@@ -150,6 +150,11 @@ image set for the target SHA, injects production secrets from the selected
 GitHub environment, runs `helm upgrade --install`, and waits for all service
 rollouts.
 
+Repository administrators should apply the branch protection, required check,
+deployment reviewer, GHCR access, and security-feature baseline in
+`docs/github-operations-runbook.md`. These GitHub-hosted controls cannot be
+enforced by repository files alone.
+
 ## Project Layout
 
 ```text
@@ -158,6 +163,7 @@ rollouts.
 |   |-- adr/
 |   |-- examples/
 |   |-- openapi/
+|   |-- github-operations-runbook.md
 |   |-- release-deployment.md
 |   |-- supply-chain-security.md
 |   `-- event-contracts.md
