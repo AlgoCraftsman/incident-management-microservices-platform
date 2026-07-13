@@ -64,6 +64,14 @@ execution, or cluster calls hang. Image build and deployment jobs get larger
 budgets because they perform Docker builds, registry checks, Helm waits, and
 rollout verification.
 
+## Workflow Concurrency
+
+CI and dependency audit workflows cancel older in-progress runs for the same
+branch or pull request ref when a newer commit starts. This keeps required checks
+focused on the latest revision and avoids spending runner time on stale commits.
+The deployment workflow remains serialized per target environment and does not
+cancel an in-progress deployment.
+
 ## Deployment Secret Handling
 
 The release deployment workflow passes secret values to Helm from temporary
