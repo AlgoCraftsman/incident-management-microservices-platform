@@ -12,7 +12,7 @@ secrets:
 redis:
   enabled: true
   name: redis
-  image: redis:7-alpine
+  image: redis:8-alpine
   port: 6379
   storage: 1Gi
   resources:
@@ -59,7 +59,7 @@ databases:
 
 postgres:
   enabled: true
-  image: postgres:15-alpine
+  image: postgres:18-alpine
   port: 5432
   resources:
     requests:

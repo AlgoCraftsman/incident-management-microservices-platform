@@ -35,7 +35,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: postgres
-          image: postgres:15-alpine
+          image: postgres:18-alpine
           imagePullPolicy: IfNotPresent
           env:
             - name: PGDATA

@@ -35,7 +35,7 @@ spec:
       automountServiceAccountToken: false
       containers:
         - name: redis
-          image: redis:7-alpine
+          image: redis:8-alpine
           imagePullPolicy: IfNotPresent
           args: ["redis-server", "--appendonly", "yes"]
           ports:
