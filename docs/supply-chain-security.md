@@ -18,6 +18,11 @@ Python minor and patch updates are grouped by dependency name across service
 directories so shared runtime dependencies move together. Major updates remain
 separate for more deliberate review.
 
+Dependabot ignores SemVer major version updates for routine version-update PRs.
+Major upgrades such as Python runtime, PostgreSQL, Redis, or GitHub Actions major
+releases should be handled as planned migration branches with explicit release
+notes review and validation.
+
 ## Pull Request Dependency Audit
 
 The `Dependency Audit` workflow runs on every pull request and on pushes to
@@ -92,3 +97,5 @@ Treat Dependabot PRs like application changes:
   investigation.
 - Merge security updates promptly after validation, even outside the weekly
   version-update cadence.
+- Treat major runtime, datastore, base image, or workflow action updates as
+  planned migration work rather than routine Dependabot maintenance.
