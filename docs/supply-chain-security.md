@@ -3,6 +3,9 @@
 The platform uses automated dependency monitoring and pull request audit gates to
 keep runtime, build, and workflow dependencies visible.
 
+Repository-level required checks and GitHub-hosted security feature toggles are
+maintained through the baseline in `docs/github-operations-runbook.md`.
+
 ## Dependabot Version Updates
 
 Dependabot is configured in `.github/dependabot.yml` for:
