@@ -1,6 +1,6 @@
 services:
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     ports:
       - "${REDIS_HOST_PORT:-6379}:6379"
     command: ["redis-server", "--appendonly", "yes"]
@@ -13,7 +13,7 @@ services:
       retries: 5
 
   postgres-incidents:
-    image: postgres:15-alpine
+    image: postgres:18-alpine
     environment:
       POSTGRES_DB: incidents
       POSTGRES_USER: incidents
@@ -29,7 +29,7 @@ services:
       retries: 5
 
   postgres-alerts:
-    image: postgres:15-alpine
+    image: postgres:18-alpine
     environment:
       POSTGRES_DB: alerts
       POSTGRES_USER: alerts
@@ -45,7 +45,7 @@ services:
       retries: 5
 
   postgres-oncall:
-    image: postgres:15-alpine
+    image: postgres:18-alpine
     environment:
       POSTGRES_DB: oncall
       POSTGRES_USER: oncall
@@ -61,7 +61,7 @@ services:
       retries: 5
 
   postgres-status-page:
-    image: postgres:15-alpine
+    image: postgres:18-alpine
     environment:
       POSTGRES_DB: status_page
       POSTGRES_USER: status_page
