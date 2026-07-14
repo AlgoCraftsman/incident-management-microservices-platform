@@ -2,13 +2,21 @@
 
 Production-shaped incident management platform for practicing SRE, DevOps, and cloud-native engineering patterns.
 
-The first build slice implements the incident lifecycle foundation:
+The current baseline implements the incident lifecycle foundation:
 
 - `incidents-service`: owns incident state, timeline history, lifecycle transitions, and incident events.
 - `alerts-service`: ingests Alertmanager-style webhooks, deduplicates raw alerts, and promotes eligible alerts into incidents.
 - `oncall-service`: resolves the current engineer from rotation schedules and records notification attempts.
 - `status-page-service`: publishes component status and converts incident events into stakeholder-facing updates.
 - `platform-common`: shared operational primitives for correlation IDs, API-key auth, event envelopes, Redis Streams publishing, and logging.
+
+## Delivery Status
+
+Phases 1 through 4 are complete for the repository baseline: incident lifecycle,
+on-call and status-page integration, Kubernetes packaging, and CI/CD and
+supply-chain hardening. This is a production-shaped platform, not a claim of
+production readiness. See `docs/build-plan.md` for delivered scope, closeout
+evidence, and prioritized production gaps.
 
 ## Architecture Principles
 
@@ -163,6 +171,7 @@ enforced by repository files alone.
 |   |-- adr/
 |   |-- examples/
 |   |-- openapi/
+|   |-- build-plan.md
 |   |-- github-operations-runbook.md
 |   |-- release-deployment.md
 |   |-- supply-chain-security.md
@@ -183,15 +192,17 @@ enforced by repository files alone.
 `-- docker-compose.yml
 ```
 
-## Verification Targets
+## Functional Verification Targets
 
-The Phase 1 target is:
+The current end-to-end target is:
 
-1. `docker compose up --build` starts both APIs, their databases, and Redis.
+1. `docker compose up --build` starts all four APIs, their databases, and Redis.
 2. A critical Prometheus alert posted to `alerts-service` creates exactly one alert and one P1 incident.
 3. Reposting the same alert fingerprint updates the existing alert instead of creating a duplicate.
 4. Incident state transitions append immutable timeline records.
 5. Events are written to Redis Streams using versioned envelopes with correlation IDs.
+6. Incident events resolve the current on-call engineer and record notification attempts.
+7. Incident events produce stakeholder-facing status-page updates.
 
 Useful local checks:
 
