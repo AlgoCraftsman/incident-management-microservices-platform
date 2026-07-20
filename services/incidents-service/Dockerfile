@@ -1,4 +1,4 @@
-FROM python:3.11-slim AS builder
+FROM python:3.14-slim AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
@@ -12,7 +12,7 @@ COPY services/incidents-service/requirements.txt /build/services/incidents-servi
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r /build/services/incidents-service/requirements.txt
 
-FROM python:3.11-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
