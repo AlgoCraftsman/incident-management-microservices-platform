@@ -40,7 +40,7 @@ jobs:
           python -m pip install -r .github/requirements-security.txt
       - name: Audit service requirements
         run: |
-          grep -Ev '^\s*(#|$|libs/)' \
+          grep -Ev '^\s*(#|$)' \
             services/${{ matrix.service }}/requirements.txt \
             > "$RUNNER_TEMP/${{ matrix.service }}-requirements.txt"
 
