@@ -225,3 +225,13 @@ OpenAPI contracts for all HTTP services are committed under `docs/openapi/` and 
 ```bash
 python scripts/export_openapi.py
 ```
+
+## Contributing and Security
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development and pull request
+guidance. Report suspected vulnerabilities through the private process in
+[SECURITY.md](SECURITY.md), not a public issue.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
