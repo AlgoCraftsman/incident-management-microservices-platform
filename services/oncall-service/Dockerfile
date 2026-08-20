@@ -1,4 +1,12 @@
-FROM python:3.11-slim AS builder
+FROM python:3.11-slim AS security-updated-base
+
+# Apply Debian's fix for CVE-2026-53615 while the upstream image remains vulnerable.
+ARG UTIL_LINUX_VERSION=2.41.5-0+deb13u1
+RUN apt-get update \
+    && apt-get install --only-upgrade -y --no-install-recommends "util-linux=${UTIL_LINUX_VERSION}" \
+    && rm -rf /var/lib/apt/lists/*
+
+FROM security-updated-base AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
@@ -12,7 +20,7 @@ COPY services/oncall-service/requirements.txt /build/services/oncall-service/req
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r /build/services/oncall-service/requirements.txt
 
-FROM python:3.11-slim AS runtime
+FROM security-updated-base AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
