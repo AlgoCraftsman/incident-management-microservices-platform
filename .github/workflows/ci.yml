@@ -182,7 +182,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run Checkov Dockerfile scan
-        uses: bridgecrewio/checkov-action@v12.1347.0
+        uses: bridgecrewio/checkov-action@v12.3114.0
         with:
           directory: .
           framework: dockerfile
