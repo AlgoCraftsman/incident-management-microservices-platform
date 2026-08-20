@@ -18,7 +18,8 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY libs/platform_common /build/libs/platform_common
 COPY services/alerts-service/requirements.txt /build/services/alerts-service/requirements.txt
 RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r /build/services/alerts-service/requirements.txt
+    && pip install --no-cache-dir -r /build/services/alerts-service/requirements.txt \
+    && pip install --no-cache-dir /build/libs/platform_common
 
 FROM security-updated-base AS runtime
 

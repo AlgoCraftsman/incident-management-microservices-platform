@@ -18,7 +18,8 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY libs/platform_common /build/libs/platform_common
 COPY services/status-page-service/requirements.txt /build/services/status-page-service/requirements.txt
 RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r /build/services/status-page-service/requirements.txt
+    && pip install --no-cache-dir -r /build/services/status-page-service/requirements.txt \
+    && pip install --no-cache-dir /build/libs/platform_common
 
 FROM security-updated-base AS runtime
 
