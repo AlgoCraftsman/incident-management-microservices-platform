@@ -150,7 +150,7 @@ jobs:
         with:
           version: v3.18.4
       - name: Set up kubectl
-        uses: azure/setup-kubectl@v5.1.0
+        uses: azure/setup-kubectl@v5.2.0
       - name: Lint Helm chart
         run: |
           helm lint infra/helm/incident-platform
@@ -184,7 +184,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Run Checkov Dockerfile scan
-        uses: bridgecrewio/checkov-action@v12.3114.0
+        uses: bridgecrewio/checkov-action@v12.3131.0
         with:
           directory: .
           framework: dockerfile
