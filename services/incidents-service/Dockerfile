@@ -1,4 +1,4 @@
-FROM python:3.11-slim AS security-updated-base
+FROM python:3.12-slim AS security-updated-base
 
 # Apply Debian's fix for CVE-2026-53615 while the upstream image remains vulnerable.
 ARG UTIL_LINUX_VERSION=2.41.5-0+deb13u1
